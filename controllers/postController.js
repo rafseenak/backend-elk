@@ -253,7 +253,7 @@ exports.getAdDetails = async (req, res) => {
                 { model: User, as: 'user' },
                 { model: AdImage, as: 'ad_images' },
                 { model: AdLocation, as: 'ad_location' },
-                { model: AdPriceDetails, as: 'ad_price_details' },
+                { model: AdPriceDetails, as: 'ad_price_details'},
             ],
             nest: true
         });

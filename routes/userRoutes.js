@@ -5,6 +5,7 @@ const userController = require('../controllers/userController');
 const placeController = require('../controllers/placeController');
 const postController = require('../controllers/postController');
 const commonController = require('../controllers/commonController');
+const chatController = require('../controllers/chatController');
 const authenticateToken = require('../middlewares/authentication');
 const multer = require('multer');
 const upload = multer();
@@ -55,10 +56,15 @@ router.post('/rent_category_posts',authenticateToken,postController.rentCategory
 router.post('/categories_search',authenticateToken,postController.searchCategories);
 router.post('/best_service_providers',authenticateToken,postController.bestServiceProviders);
 
+//chat
+router.post('/add_chat',authenticateToken,chatController.addChat);
+
 //common
 router.get('/price_categories',commonController.priceCategories);
 router.post('/add_price_categories',commonController.addPriceCategories);
+router.delete('/delete_price_categories',commonController.deletePriceCategories);
 router.post('/ad_catergories_for',authenticateToken,postController.adCategoriesFor);
+router.delete('/clear_all',commonController.clearDatabase);
 router.post('/send_token_notification',()=>{});
 
 module.exports = router;

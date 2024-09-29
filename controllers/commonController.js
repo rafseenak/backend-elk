@@ -1,5 +1,19 @@
-const { where } = require('sequelize');
+const AdCategory = require('../models/adCategoryModel');
+const AdImage = require('../models/adImageModel');
+const AdLocation = require('../models/adLocationModel');
+const Ad = require('../models/adModel');
+const AdPriceDetails = require('../models/adPriceDetailsModel');
+const AdViews = require('../models/adViewModel');
+const AdWishLists = require('../models/adWishListModel');
+const ChatMessage = require('../models/chatMessageModel');
+const ChatRoom = require('../models/chatRoomModel');
+const ContactView = require('../models/contactViewModel');
+const Otp = require('../models/otpModel');
+const Place = require('../models/placeModel');
 const PriceCategory = require('../models/priceCategoryModel');
+const SearchCategory = require('../models/searchCategoryModel');
+const User = require('../models/userModel');
+const UserSearch = require('../models/userSearchModel');
 
 exports.priceCategories = async (req, res) => {
   try {
@@ -10,7 +24,7 @@ exports.priceCategories = async (req, res) => {
         group[category].push(item);
         return group;
     }, {});
-    res.json(groupedCategories);
+    res.status(200).json(groupedCategories);
   } catch (error) {
     res.status(500).json({ error: 'Something went wrong' });
   }
@@ -18,10 +32,10 @@ exports.priceCategories = async (req, res) => {
 exports.addPriceCategories = async (req, res) => {
   try {
     const {category, title} = req.body;
-    // const priceCategories = await PriceCategory.findAll({where:{title:title,category:category}});
-    // if(priceCategories){
-    //   return res.status(200).json({ message: 'Already Exist!' });
-    // }
+    const priceCategories = await PriceCategory.findAll({where:{title:title,category:category}});
+    if(priceCategories){
+      return res.status(200).json({ message: 'Already Exist!' });
+    }
     await PriceCategory.create({
       title:title,
       category:category
@@ -31,3 +45,39 @@ exports.addPriceCategories = async (req, res) => {
     return res.status(500).json({ error: 'Something went wrong' });
   }
 };
+exports.deletePriceCategories = async (req,res)=>{
+  try{
+    const {category, title}=req.body;
+    const priceCategories = await PriceCategory.findOne({where:{title:title,category:category}});
+    if(!priceCategories){
+      return res.status(200).json({ message: 'Nothing to delete!' });
+    }
+    await PriceCategory.destroy({where:{title:title,category:category}});
+    return res.status(200).json({ message: 'Successfully Deleted!' });
+  }catch(error){
+    return res.status(500).json({ error: 'Something went wrong'+error });
+  }
+}
+
+exports.clearDatabase = async (req, res)=>{
+  try{
+    await AdLocation.destroy({where:{}});
+    await AdImage.destroy({where:{}});
+    await AdPriceDetails.destroy({where:{}});
+    await AdWishLists.destroy({where:{}});
+    await AdCategory.destroy({where:{}});
+    await AdViews.destroy({where:{}});
+    await Ad.destroy({where:{}});
+    await ContactView.destroy({where:{}});
+    await Otp.destroy({where:{}});
+    await Place.destroy({where:{}});
+    await SearchCategory.destroy({where:{}});
+    await UserSearch.destroy({where:{}});
+    await ChatMessage.destroy({where:{}});
+    await ChatRoom.destroy({where:{}});
+    await User.destroy({where:{}});
+    return res.status(200).json({ message: 'Successfully Deleted!' });
+  }catch(e){
+    return res.status(500).json({ error: 'Something went wrong'+error });
+  }
+}
