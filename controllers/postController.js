@@ -41,12 +41,12 @@ function generateAdId() {
 
 exports.createAd = async (req, res) => {
     const data = req.body;
-    if (!data.title||!data.description||!data.ad_type||!data.category||!data.ad_prices) {
+    if (!data.title||!data.description||!data.ad_type||!data.category||!data.ad_prices||!data.mobile) {
         return res.status(400).json({ success: false, message: 'Invalid request' });
     }
     try {
         const user = req.user;
-        const { ad_id, title, description, category, ad_type, ad_prices } = req.body;
+        const { ad_id, title, description, category, ad_type, ad_prices, mobile } = req.body;
         await SearchCategory.create({
             keyword: title,
             category: category,
@@ -59,6 +59,7 @@ exports.createAd = async (req, res) => {
                 ad_id: generateAdId(),
                 user_id: user.id,
                 title,
+                mobile,
                 description,
                 category,
                 ad_type,
