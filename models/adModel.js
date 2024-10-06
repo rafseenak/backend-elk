@@ -40,10 +40,6 @@ Ad.init({
         type: DataTypes.BIGINT,
         allowNull: false,
     },
-    mobile: {
-        type: DataTypes.BIGINT,
-        allowNull: false,
-    },
     title: {
         type: DataTypes.STRING,
         allowNull: false,

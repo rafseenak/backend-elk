@@ -41,12 +41,12 @@ function generateAdId() {
 
 exports.createAd = async (req, res) => {
     const data = req.body;
-    if (!data.title||!data.description||!data.ad_type||!data.category||!data.ad_prices||!data.mobile) {
+    if (!data.title||!data.description||!data.ad_type||!data.category||!data.ad_prices) {
         return res.status(400).json({ success: false, message: 'Invalid request' });
     }
     try {
         const user = req.user;
-        const { ad_id, title, description, category, ad_type, ad_prices, mobile } = req.body;
+        const { ad_id, title, description, category, ad_type, ad_prices } = req.body;
         await SearchCategory.create({
             keyword: title,
             category: category,
@@ -59,7 +59,6 @@ exports.createAd = async (req, res) => {
                 ad_id: generateAdId(),
                 user_id: user.id,
                 title,
-                mobile,
                 description,
                 category,
                 ad_type,
@@ -692,7 +691,7 @@ exports.recommentedPosts = async (req, res) => {
         }
         res.status(200).json(response);
     } catch (error) {
-        
+        console.log(error);
         res.status(500).json({ message: 'Server error' });
     }
 };
