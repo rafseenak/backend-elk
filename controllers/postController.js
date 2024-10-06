@@ -308,7 +308,7 @@ exports.getAdDetails = async (req, res) => {
                 latitude: `${ad.ad_location.latitude}`,
                 createdAt: ad.ad_location.createdAt.toISOString(),
                 updatedAt: ad.ad_location.updatedAt.toISOString()
-            },
+            }, 
             user: {
                 id: ad.user.id,
                 user_id: ad.user.user_id,
