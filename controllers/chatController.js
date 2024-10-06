@@ -80,7 +80,6 @@ exports.getRoomChat = async (req, res) => {
         const chatRoom = await ChatRoom.findOne({ 
             where: { room_id: room_id },
             include: [
-                { model: Participant, as: 'participants' },
                 { model: ChatMessage, as: 'chat_messages' },
             ],
             order: [['createdAt', 'ASC']],
