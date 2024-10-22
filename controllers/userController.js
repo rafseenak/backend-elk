@@ -323,9 +323,9 @@ exports.updateProfilePic = async (req, res) => {
         const user = await User.findOne({where:{user_id:id}});
         user.profile=fileName;
         await user.save();
-        res.status(200).json({message:"Profile pic updated."});
+        res.status(200).json({success: true, message: 'Profile Pic updated'});
     }catch(e){
-        res.status(500).json({error: e.message});
+        res.status(500).json({ success: false, message: e.message });
     }
 };
 
