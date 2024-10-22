@@ -323,13 +323,13 @@ exports.updateProfilePic = async (req, res) => {
         const user = await User.findOne({where:{user_id:id}});
         user.profile=fileName;
         await user.save();
-        let profileUrl;
-        const command = new GetObjectCommand({
-            Bucket: process.env.BUCKET_NAME,
-            Key: fileName,
-        });
-        profileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
-        res.status(200).json({success: true, data: profileUrl});
+        // let profileUrl;
+        // const command = new GetObjectCommand({
+        //     Bucket: process.env.BUCKET_NAME,
+        //     Key: fileName,
+        // });
+        // profileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+        res.status(200).json({success: true, data: 'https://rafsi-test.s3.eu-north-1.amazonaws.com/1729532649189110.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAZI2LDFYT5X2HDAMA%2F20241022%2Feu-north-1%2Fs3%2Faws4_request&X-Amz-Date=20241022T172923Z&X-Amz-Expires=604800&X-Amz-Signature=dfbe8be8d82e1cd8bccfdf8e76ee47a5825d521bebe30e3f79929fa6b16e2028&X-Amz-SignedHeaders=host&x-id=GetObject'});
     }catch(e){
         console.error(e)
         res.status(500).json({ success: false, message: e.message });
