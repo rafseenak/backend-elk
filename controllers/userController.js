@@ -326,11 +326,12 @@ exports.updateProfilePic = async (req, res) => {
         let profileUrl;
         const command = new GetObjectCommand({
             Bucket: process.env.BUCKET_NAME,
-            Key: user.profile,
+            Key: fileName,
         });
         profileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
         res.status(200).json({success: true, data: profileUrl});
     }catch(e){
+        console.error(e)
         res.status(500).json({ success: false, message: e.message });
     }
 };
