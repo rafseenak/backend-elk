@@ -323,7 +323,13 @@ exports.updateProfilePic = async (req, res) => {
         const user = await User.findOne({where:{user_id:id}});
         user.profile=fileName;
         await user.save();
-        res.status(200).json({success: true, message: 'Profile Pic updated'});
+        let profileUrl;
+        const command = new GetObjectCommand({
+            Bucket: process.env.BUCKET_NAME,
+            Key: user.profile,
+        });
+        profileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+        res.status(200).json({success: true, data: profileUrl});
     }catch(e){
         res.status(500).json({ success: false, message: e.message });
     }
