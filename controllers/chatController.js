@@ -94,6 +94,35 @@ exports.getRoomChat = async (req, res) => {
     }
 };
 
+exports.getChatMessages = async (req, res) => {
+    const { senderId, receiverId } = req.query;
+    if (!senderId || !receiverId) {
+        return res.status(400).json({ message: 'Invalid request' });
+    }
+    try {
+        let chatRoom = await ChatRoom.findOne({
+            where: {
+                [Op.or]: [
+                    { user1: senderId, user2: receiverId },
+                    { user1: receiverId, user2: senderId },
+                ],
+            },
+        });
+        if (!chatRoom) {
+            return res.status(404).json({ message: 'Chat room not found' });
+        }
+        const chatMessages = await ChatMessage.findAll({
+            where: {
+                room_id: chatRoom.room_id,
+            },
+            order: [['createdAt', 'ASC']],
+        });
+        res.status(200).json({ message: 'Chat messages retrieved successfully', data: chatMessages });
+    } catch (error) {
+        res.status(500).json({ error: 'Something went wrong: ' + error.message });
+    }
+};
+
 exports.deleteRoom = async (req,res)=>{
     const { id }=req.body;
     if ( !id ) {

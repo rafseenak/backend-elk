@@ -58,6 +58,7 @@ router.post('/best_service_providers',authenticateToken,postController.bestServi
 
 //chat
 router.post('/add_chat',authenticateToken,chatController.addChat);
+router.get('/get_chat', chatController.getChatMessages);
 
 //common
 router.get('/price_categories',commonController.priceCategories);
