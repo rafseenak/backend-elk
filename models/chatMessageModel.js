@@ -41,6 +41,11 @@ const ChatMessage = sequelize.define('ChatMessage', {
         type: DataTypes.STRING,
         allowNull: true,
     },
+    deleted_for: {
+        type: DataTypes.ARRAY(DataTypes.BIGINT),
+        allowNull: true,
+        defaultValue: []
+    }
 }, {
     modelName:'ChatMessage',
     tableName:'chat_messages',
