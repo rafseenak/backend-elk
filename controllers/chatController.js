@@ -2,6 +2,7 @@ const ChatRoom = require('../models/chatRoomModel');
 const ChatMessage = require('../models/chatMessageModel');
 const { PutObjectCommand, S3Client, GetObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 require('dotenv').config();
+const { Op,literal } = require('sequelize');
 
 const s3 = new S3Client({
     region: process.env.BUCKET_REGION,
