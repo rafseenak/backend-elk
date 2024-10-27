@@ -145,7 +145,8 @@ exports.getChatMessages = async (req, res) => {
             },
         });
         if (!chatRoom) {
-            return res.status(404).json({ message: 'Chat room not found' });
+            const data={}
+            return res.status(200).json({ message: 'Chat room not found', data });
         }
         const chatMessages = await ChatMessage.findAll({
             where: {
