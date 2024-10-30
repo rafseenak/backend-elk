@@ -59,6 +59,11 @@ router.post('/best_service_providers',authenticateToken,postController.bestServi
 //chat
 router.post('/add_chat',authenticateToken,chatController.addChat);
 router.get('/get_chat', chatController.getChatMessages);
+router.get('/chat_rooms', chatController.getChatRooms);
+router.get('/unread_chat_room_count', chatController.getTotalChatRoomsCount);
+router.post('/block_user',chatController.blockAUser);
+router.post('/unblock_user',chatController.unblockAUser);
+router.get('/is_blocked',chatController.isUserBlocked);
 
 //common
 router.get('/price_categories',commonController.priceCategories);

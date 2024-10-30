@@ -41,15 +41,22 @@ const ChatMessage = sequelize.define('ChatMessage', {
         type: DataTypes.STRING,
         allowNull: true,
     },
-    deleted_for: {
-        type: DataTypes.ARRAY(DataTypes.BIGINT),
+    ad_id: {
+        type: DataTypes.BIGINT,
         allowNull: true,
-        defaultValue: []
+    },
+    ad_name: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    time: {
+        type: DataTypes.DATE,
+        allowNull: false,
     }
 }, {
     modelName:'ChatMessage',
     tableName:'chat_messages',
-    timestamps: false, 
+    timestamps: true,
 });
 
 ChatMessage.belongsTo(ChatRoom, {as:'chat_room', foreignKey: 'room_id',targetKey: 'room_id' });
