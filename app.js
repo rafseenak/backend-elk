@@ -38,7 +38,8 @@ sequelize.sync({ alter: false })
 
 io.on('connection', (socket) => {
   console.log('A user connected');
-  socket.on('sendMessage', async (messageData) => {console.log('called');
+  socket.on('sendMessage', async (messageData) => {
+    console.log('called');
   
     try {
       if (messageData.file) {        

@@ -174,6 +174,8 @@ exports.updateMessageStatus = async (authUserId, otherUserId)=>{
 
 exports.getChatMessages = async (req, res) => {
     const { authUserId, otherUserId } = req.query;
+    console.log('getchats called.');
+    
     if (!authUserId || !otherUserId) {
         return res.status(400).json({ message: 'Invalid request' });
     }
