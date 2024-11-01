@@ -9,10 +9,14 @@ const chatController = require('./controllers/chatController');
 const socketIo = require('socket.io');
 const http = require('http');
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+});
 
 const port = process.env.PORT || 5000;
-server.use(cors({
+app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
