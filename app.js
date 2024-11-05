@@ -15,7 +15,7 @@ const io = socketIo(server, {
   allowedHeaders: ['Content-Type', 'Authorization']
 });
 
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 3000;
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -43,8 +43,6 @@ sequelize.sync({ alter: false })
 io.on('connection', (socket) => {
   console.log('A user connected');
   socket.on('sendMessage', async (messageData) => {
-    console.log('called');
-  
     try {
       if (messageData.file) {        
         const fileBuffer = Buffer.from(messageData.file, 'base64');
@@ -92,7 +90,7 @@ io.on('connection', (socket) => {
               status: messageData.status
             }
           }, 
-          { 
+          {
             status: (code) => ({ 
               json: (result) => {
                 console.log(code);
@@ -110,7 +108,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('updateMessageStatus', async ({ authUserId, otherUserId }) => {
-    console.log('updateMessageStatus called');
     try {
       await chatController.updateMessageStatus(authUserId, otherUserId);
     } catch (error) {

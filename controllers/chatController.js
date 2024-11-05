@@ -98,6 +98,13 @@ exports.blockAUser = async (req,res) => {
         return res.status(400).json({ message: 'Invalid request' });
     }
     try{
+        const existingBlock = await BlockedUser.findOne({
+            where: { blocker_id: authUserId, blocked_id: otherUserId }
+        });
+
+        if (existingBlock) {
+            return res.status(200).json({ message: 'Success' });
+        }
         await BlockedUser.create({ blocker_id: authUserId, blocked_id: otherUserId });
         return res.status(200).json({ message: 'Success!' });
     }catch(e){
@@ -174,7 +181,6 @@ exports.updateMessageStatus = async (authUserId, otherUserId)=>{
 
 exports.getChatMessages = async (req, res) => {
     const { authUserId, otherUserId } = req.query;
-    console.log('getchats called.');
     
     if (!authUserId || !otherUserId) {
         return res.status(400).json({ message: 'Invalid request' });
