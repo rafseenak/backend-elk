@@ -72,19 +72,39 @@ exports.addChat = async (req, res) => {
             });
             await s3.send(command);
         }
-        const chatMessage = await ChatMessage.create({
-            room_id: chatRoom.room_id,
-            sender_id: authUserId,
-            reciever_id: userId,
-            message: message,
-            type: type,
-            status: isBlocked ? 'blocked' : status,
-            file_name: file ? file_name : '',
-            ad_id,
-            ad_name,
-            time: lastMessageTime,
-        });
-        chatMessage.dataValues.file_url=(file_name!=='')?await getImageUrl(file_name):null;
+        var chatMessage;
+        if(type=='text'||type=='system'){
+            chatMessage = await ChatMessage.create({
+                room_id: chatRoom.room_id,
+                sender_id: authUserId,
+                reciever_id: userId,
+                message: message,
+                type: type,
+                status: isBlocked ? 'blocked' : status,
+                file_name: '',
+                ad_id,
+                ad_name,
+                time: lastMessageTime,
+            });
+        }else if(type=='image'||type=='audio'||type=='video'){
+            if(file){
+                chatMessage = await ChatMessage.create({
+                    room_id: chatRoom.room_id,
+                    sender_id: authUserId,
+                    reciever_id: userId,
+                    message: message,
+                    type: type,
+                    status: isBlocked ? 'blocked' : status,
+                    file_name: file_name,
+                    ad_id,
+                    ad_name,
+                    time: lastMessageTime,
+                });
+                chatMessage.dataValues.file_url=(file_name!=='')?await getImageUrl(file_name):null;
+            }else{
+                return res.status(400).json({ message: 'Invalid request' });
+            }
+        }
         res.status(200).json({ message: 'Chat message added successfully', data: chatMessage.dataValues });
     } catch (error) {
         console.log(error);
@@ -238,7 +258,7 @@ exports.getChatMessages = async (req, res) => {
         }        
         res.status(200).json({ message: 'Chat messages retrieved successfully', data });
     } catch (error) {
-        res.status(500).json({ error: 'Something went wrongokk: ' + error.message });
+        res.status(500).json({ error: 'Something went wrong' + error.message });
     }
 };
 

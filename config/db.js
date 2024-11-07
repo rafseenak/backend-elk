@@ -4,6 +4,9 @@ const sequelize = new Sequelize(process.env.DB_SCHEMA, process.env.DB_USER, proc
     host: process.env.HOST,
     dialect: process.env.DILECT,
     logging: false, 
+    dialectOptions: {
+        connectTimeout: 60000
+    }
 });
 
 (async () => {

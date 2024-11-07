@@ -72,7 +72,9 @@ router.delete('/delete_price_categories',commonController.deletePriceCategories)
 router.post('/ad_catergories_for',authenticateToken,postController.adCategoriesFor);
 router.delete('/clear_all',commonController.clearDatabase);
 router.post('/send_token_notification',()=>{});
+
 const BlockedUser = require('../models/blockedUserModel');
+const User = require('../models/userModel');
 
 router.get('/blocked-users', async (req, res) => {
     try {
@@ -82,6 +84,16 @@ router.get('/blocked-users', async (req, res) => {
       console.error("Error fetching blocked users:", error);
       res.status(500).json({ message: "An error occurred while fetching blocked users" });
     }
-  });
+});
+
+router.get('/get-all-users', async (req, res) => {
+    try {
+      const blockedUsers = await User.findAll();
+      res.status(200).json(blockedUsers);
+    } catch (error) {
+      console.error("Error fetching blocked users:", error);
+      res.status(500).json({ message: "An error occurred while fetching blocked users" });
+    }
+});
 
 module.exports = router;
