@@ -100,7 +100,8 @@ exports.addChat = async (req, res) => {
                     ad_name,
                     time: lastMessageTime,
                 });
-                chatMessage.dataValues.file_url=(file_name!=='')?await getImageUrl(file_name):null;
+                chatMessage.dataValues.file_url=(file_name!=='')?
+                await getImageUrl(file_name):null;
             }else{
                 return res.status(400).json({ message: 'Invalid request' });
             }
@@ -290,13 +291,13 @@ exports.getChatRooms = async (req, res)=>{
         const chatRooms = await ChatRoom.findAll({
             where: {
                 [Op.or]: [
-                    { user1: authUserId??1730134624019338 },
-                    { user2: authUserId??1730134624019338 }
+                    { user1: authUserId },
+                    { user2: authUserId }
                 ]
             },
             attributes: {
                 include: [
-                    [sequelize.fn('COUNT', sequelize.literal(`CASE WHEN chat_messages.reciever_id = ${authUserId??1730134624019338} and chat_messages.status = 'send' THEN 1 END`)), 'new_message_count']
+                    [sequelize.fn('COUNT', sequelize.literal(`CASE WHEN chat_messages.reciever_id = ${authUserId} and chat_messages.status = 'send' THEN 1 END`)), 'new_message_count']
                 ]
             },
             include: [
@@ -305,15 +306,33 @@ exports.getChatRooms = async (req, res)=>{
                 { model: ChatMessage, as: 'chat_messages', attributes: [], required: false }
             ],
             group: ['ChatRoom.id'],
-            order: [['last_message_time', 'ASC']],
+            order: [['last_message_time', 'DESC']],
         });
         let data = []
-        if(chatRooms.length>0){
+        if (chatRooms.length > 0) {
             data = await Promise.all(
-                chatRooms.map(async (chatRoom) => {                
-                    chatRoom.User1.profile =chatRoom.User1.profile!=null? await getImageUrl(chatRoom.User1.profile):null;
-                    chatRoom.User2.profile =chatRoom.User2.profile!=null? await getImageUrl(chatRoom.User2.profile):null;
-                    return chatRoom;
+                chatRooms.map(async (chatRoom) => {
+                    const localTime = new Date(chatRoom.last_message_time).toLocaleString("en-US", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "numeric",
+                        hour12: true
+                    });
+                    chatRoom.last_message_time === localTime;
+                    const authUser = chatRoom.User1.id === authUserId ? chatRoom.User1.toJSON() : chatRoom.User2.toJSON();
+                    const otherUser = chatRoom.User1.id === authUserId ? chatRoom.User2.toJSON() : chatRoom.User1.toJSON();
+                    authUser.profile = authUser.profile ? await getImageUrl(authUser.profile) : null;
+                    otherUser.profile = otherUser.profile ? await getImageUrl(otherUser.profile) : null;
+                    return {
+                        ...chatRoom.toJSON(),
+                        last_message_time: localTime,
+                        User1: null,
+                        User2 : null,
+                        authUser,
+                        otherUser,
+                    };
                 })
             );
         }
