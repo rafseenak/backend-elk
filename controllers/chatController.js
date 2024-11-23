@@ -342,6 +342,62 @@ exports.getChatRooms = async (req, res)=>{
     }
 }
 
+exports.fetchChatRooms = async (authUserId) => {
+    const chatRooms = await ChatRoom.findAll({
+      where: {
+        [Op.or]: [
+          { user1: authUserId },
+          { user2: authUserId }
+        ]
+      },
+      attributes: {
+        include: [
+          [sequelize.fn('COUNT', sequelize.literal(`CASE WHEN chat_messages.reciever_id = ${authUserId} and chat_messages.status = 'send' THEN 1 END`)), 'new_message_count']
+        ]
+      },
+      include: [
+        { model: User, as: 'User1' },
+        { model: User, as: 'User2' },
+        { model: ChatMessage, as: 'chat_messages', attributes: [], required: false }
+      ],
+      group: ['ChatRoom.id'],
+      order: [['last_message_time', 'DESC']],
+    });
+  
+    let data1 = [];
+  
+    if (chatRooms.length > 0) {
+      data1 = await Promise.all(
+        chatRooms.map(async (chatRoom) => {
+          const localTime = new Date(chatRoom.last_message_time).toLocaleString("en-US", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+            hour: "numeric",
+            minute: "numeric",
+            hour12: true
+          });
+  
+          const authUser = chatRoom.User1.user_id === authUserId ? chatRoom.User1.toJSON() : chatRoom.User2.toJSON();
+          const otherUser = chatRoom.User1.user_id === authUserId ? chatRoom.User2.toJSON() : chatRoom.User1.toJSON();
+          
+          authUser.profile = authUser.profile ? await getImageUrl(authUser.profile) : null;
+          otherUser.profile = otherUser.profile ? await getImageUrl(otherUser.profile) : null;
+  
+          return {
+            ...chatRoom.toJSON(),
+            last_message_time: localTime,
+            User1: null,
+            User2: null,
+            authUser,
+            otherUser,
+          };
+        })
+      );
+    }  
+    return data1;
+  };
+  
 
 
 
