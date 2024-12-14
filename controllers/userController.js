@@ -8,15 +8,21 @@ const path = require('path');
 const { PutObjectCommand, S3Client, GetObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { validationResult } = require('express-validator');
-const AdWishLists = require('../models/adWishListModel');
-const AdImage = require('../models/adImageModel');
-const AdPriceDetails = require('../models/adPriceDetailsModel');
-const AdLocation = require('../models/adLocationModel');
-const Ad = require('../models/adModel');
-const ContactView = require('../models/contactViewModel');
 const { profile } = require('console');
 require('dotenv').config();
-
+const AdView = require('../models/adViewModel');
+const AdImage = require('../models/adImageModel');
+const AdLocation = require('../models/adLocationModel');
+const Ad = require('../models/adModel');
+const AdPriceDetails = require('../models/adPriceDetailsModel');
+const AdWishLists = require('../models/adWishListModel');
+const ChatMessage = require('../models/chatMessageModel');
+const ChatRoom = require('../models/chatRoomModel');
+const ContactView = require('../models/contactViewModel');
+const Place = require('../models/placeModel');
+const PriceCategory = require('../models/priceCategoryModel');
+const SearchCategory = require('../models/searchCategoryModel');
+const UserSearch = require('../models/userSearchModel');
 const generateUserId = () => {
     const timestamp = Date.now();
     const randomNum = Math.floor(Math.random() * 1000);
@@ -385,6 +391,60 @@ exports.updateProfile = async (req, res) => {
         return res.status(200).json({ success: true, message: 'Profile successfully updated' });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+exports.deleteAccount = async (req, res) => {
+    const { user_id } = req.query;
+
+    if (!user_id) {
+        return res.status(400).json({ success: false, message: 'Invalid request' });
+    }
+
+    try {
+        const ads = await Ad.findAll({ where: { user_id: user_id } });
+        if (ads.length > 0) {
+            const adId = ads[0].ad_id;
+            await AdImage.destroy({ where: { ad_id: adId } });
+            await AdLocation.destroy({where: { ad_id: adId }});
+            await AdPriceDetails.destroy({where: { ad_id: adId }});
+            await AdWishLists.destroy({where: { ad_id: adId }});
+            await AdView.destroy({where: { ad_id: adId }});
+            await Ad.destroy({ where: { user_id: user_id } });
+        }
+        await ChatMessage.destroy({
+            where: {
+                [sequelize.Op.or]: [
+                    { sender_id: user_id },
+                    { reciever_id: user_id },
+                ],
+            },
+        });
+        await ChatRoom.destroy({
+            where: {
+                [sequelize.Op.or]: [
+                    { user1: user_id },
+                    { user2: user_id },
+                ],
+            },
+        });
+        await ContactView.destroy({
+            where: {
+                [sequelize.Op.or]: [
+                    { user_id: user_id },
+                    { viewer_id: user_id },
+                ],
+            },
+        });
+        await UserSearch.destroy({where:{user_id:user_id}});
+        const deletedUser = await User.destroy({ where: { id: user_id } });
+        if (!deletedUser) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        return res.status(200).json({ success: true, message: 'Account deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting account:', error);
+        return res.status(500).json({ success: false, message: 'An error occurred while deleting the account' });
     }
 };
 
