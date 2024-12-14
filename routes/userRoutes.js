@@ -35,7 +35,7 @@ router.post('/remove_wishlist', authenticateToken, userController.removeWishlist
 router.post('/user_with_ads', authenticateToken, userController.userWithAds);
 router.post('/view_contact', authenticateToken, userController.viewContact);
 router.get('/view_contact',authenticateToken,userController.viewContact);
-router.get('/delete_account',authenticateToken,userController.deleteAccount);
+router.delete('/delete_account',authenticateToken,userController.deleteAccount);
 
 
 //place
