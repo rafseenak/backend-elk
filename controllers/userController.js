@@ -23,6 +23,8 @@ const Place = require('../models/placeModel');
 const PriceCategory = require('../models/priceCategoryModel');
 const SearchCategory = require('../models/searchCategoryModel');
 const UserSearch = require('../models/userSearchModel');
+const sequelize = require('../config/db');
+
 const generateUserId = () => {
     const timestamp = Date.now();
     const randomNum = Math.floor(Math.random() * 1000);
@@ -403,18 +405,18 @@ exports.deleteAccount = async (req, res) => {
 
     try {
         const ads = await Ad.findAll({ where: { user_id: user_id } });
-        if (ads.length > 0) {
-            const adId = ads[0].ad_id;
-            await AdImage.destroy({ where: { ad_id: adId } });
-            await AdLocation.destroy({where: { ad_id: adId }});
-            await AdPriceDetails.destroy({where: { ad_id: adId }});
-            await AdWishLists.destroy({where: { ad_id: adId }});
-            await AdView.destroy({where: { ad_id: adId }});
-            await Ad.destroy({ where: { user_id: user_id } });
+        for (const ad of ads) {
+            await AdImage.destroy({ where: { ad_id: ad.ad_id } });
+            await AdLocation.destroy({ where: { ad_id: ad.ad_id } });
+            await AdPriceDetails.destroy({ where: { ad_id: ad.ad_id } });
+            await AdWishLists.destroy({ where: { ad_id: ad.ad_id } });
+            await AdView.destroy({ where: { ad_id: ad.ad_id } });
         }
+        await Ad.destroy({ where: { user_id } });
+
         await ChatMessage.destroy({
             where: {
-                [sequelize.Op.or]: [
+                [Op.or]: [
                     { sender_id: user_id },
                     { reciever_id: user_id },
                 ],
@@ -422,7 +424,7 @@ exports.deleteAccount = async (req, res) => {
         });
         await ChatRoom.destroy({
             where: {
-                [sequelize.Op.or]: [
+                [Op.or]: [
                     { user1: user_id },
                     { user2: user_id },
                 ],
@@ -430,14 +432,14 @@ exports.deleteAccount = async (req, res) => {
         });
         await ContactView.destroy({
             where: {
-                [sequelize.Op.or]: [
+                [Op.or]: [
                     { user_id: user_id },
                     { viewer_id: user_id },
                 ],
             },
         });
         await UserSearch.destroy({where:{user_id:user_id}});
-        const deletedUser = await User.destroy({ where: { id: user_id } });
+        const deletedUser = await User.destroy({ where: { user_id: user_id } });
         if (!deletedUser) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
