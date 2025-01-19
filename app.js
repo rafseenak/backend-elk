@@ -90,6 +90,7 @@ io.on('connection', (socket) => {
                     socket.emit('chatRooms', []);
                   }
                   io.emit('newMessage', result['data']);
+                  io.emit('readMessage', result['data']);
                 }
               } 
             }) 
@@ -121,6 +122,7 @@ io.on('connection', (socket) => {
                     socket.emit('chatRooms', []);
                   }
                   io.emit('newMessage', result['data']);
+                  io.emit('readMessage', result['data']);
                 }
               } 
             }) 
@@ -133,6 +135,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('updateMessageStatus', async ({ authUserId, otherUserId }) => {
+    console.log('updateMessageStatus');
+    
     try {
       await chatController.updateMessageStatus(authUserId, otherUserId);
     } catch (error) {

@@ -62,23 +62,23 @@ exports.deletePriceCategories = async (req,res)=>{
 
 exports.clearDatabase = async (req, res)=>{
   try{
-    // await AdLocation.destroy({where:{}});
-    // await AdImage.destroy({where:{}});
-    // await AdPriceDetails.destroy({where:{}});
-    // await AdWishLists.destroy({where:{}});
-    // await AdCategory.destroy({where:{}});
-    // await AdViews.destroy({where:{}});
-    // await Ad.destroy({where:{}});
-    // await ContactView.destroy({where:{}});
-    // await Otp.destroy({where:{}});
-    // await Place.destroy({where:{}});
-    // await SearchCategory.destroy({where:{}});
-    // await UserSearch.destroy({where:{}});
+    await AdLocation.destroy({where:{}});
+    await AdImage.destroy({where:{}});
+    await AdPriceDetails.destroy({where:{}});
+    await AdWishLists.destroy({where:{}});
+    await AdCategory.destroy({where:{}});
+    await AdViews.destroy({where:{}});
+    await Ad.destroy({where:{}});
+    await ContactView.destroy({where:{}});
+    await Otp.destroy({where:{}});
+    await Place.destroy({where:{}});
+    await SearchCategory.destroy({where:{}});
+    await UserSearch.destroy({where:{}});
     await ChatMessage.destroy({where:{}});
     await ChatRoom.destroy({where:{}});
-    // await ChatMessage.drop();
-    // await ChatRoom.drop();
-    // await User.destroy({where:{}});
+    await ChatMessage.drop();
+    await ChatRoom.drop();
+    await User.destroy({where:{}});
     // await sequelize.drop();
     return res.status(200).json({ message: 'Successfully Deleted!' });
   }catch(e){
