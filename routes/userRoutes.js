@@ -9,7 +9,7 @@ const chatController = require('../controllers/chatController');
 const authenticateToken = require('../middlewares/authentication');
 const multer = require('multer');
 const upload = multer();
-
+const User = require('../models/userModel');
 //completed
 //user
 router.get('/create_guest', userController.createGuestUser);
@@ -37,7 +37,26 @@ router.post('/view_contact', authenticateToken, userController.viewContact);
 router.get('/view_contact',authenticateToken,userController.viewContact);
 router.delete('/delete_account',authenticateToken,userController.deleteAccount);
 
+router.get('/check-phone', async (req, res) => {
+  try {
+      const { mobile_number } = req.query;
 
+      if (!mobile_number) {
+          return res.status(400).json({ message: 'Mobile number is required' });
+      }
+
+      const user = await User.findOne({ where: { mobile_number } });
+
+      if (user) {
+          return res.status(200).json({ exists: true });
+      }
+
+      return res.status(200).json({ exists: false});
+  } catch (error) {
+      console.error('Error checking phone number:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+  }
+});
 //place
 router.post('/get_place', authenticateToken, body('longitude').isNumeric(), body('latitude').isNumeric(), placeController.getPlace);
 router.post('/place_search', authenticateToken, placeController.placeSearch);
@@ -76,7 +95,6 @@ router.delete('/clear_all',commonController.clearDatabase);
 router.post('/send_token_notification',()=>{});
 
 const BlockedUser = require('../models/blockedUserModel');
-const User = require('../models/userModel');
 
 router.get('/blocked-users', async (req, res) => {
     try {
