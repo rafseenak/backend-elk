@@ -3,25 +3,7 @@ const sequelize = require('../config/db');
 const User = require('./userModel');
 
 class Ad extends Model {
-    // static withDistance(latitude, longitude) {
-    //     return this.findAll({
-    //         attributes: {
-    //             include: [
-    //                 [
-    //                     literal(`(6371 * acos(cos(radians(${latitude})) * cos(radians(ad_locations.latitude)) 
-    //                         * cos(radians(ad_locations.longitude) - radians(${longitude})) + sin(radians(${latitude})) 
-    //                         * sin(radians(ad_locations.latitude))))`),
-    //                     'distance'
-    //                 ]
-    //             ]
-    //         },
-    //         include: [{
-    //             model: sequelize.models.AdLocation,
-    //             attributes: []
-    //         }],
-    //         order: [[literal('distance'), 'ASC']]
-    //     });
-    // }
+    
 }
 
 Ad.init({

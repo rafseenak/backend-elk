@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const userController = require('../controllers/userController');
+const adminController = require('../controllers/adminController');
+
 const placeController = require('../controllers/placeController');
 const postController = require('../controllers/postController');
 const commonController = require('../controllers/commonController');
@@ -115,5 +117,10 @@ router.get('/get-all-users', async (req, res) => {
       res.status(500).json({ message: "An error occurred while fetching blocked users" });
     }
 });
+
+router.get('/get-admin-ads', adminController.getAdminAds);
+router.delete('/delete-ad', adminController.deleteAdminAd);
+router.get('/get-ad-locations', adminController.getAllAdLocations)
+
 
 module.exports = router;
