@@ -64,104 +64,183 @@ const sendSangamamOtp = async (mobile, otp) => {
     return await sendCurl(url);
 };
 
-exports.createGuestUser = async (req, res) => {       
-    try {
-        let userId = generateUserId();
-        while (await User.findOne({ where: { user_id: userId } })) {
-            userId = generateUserId();
-        }
-        const guest = await User.create({
-            is_guest: true,
-            user_id: userId,
-            name:'Guest'
-        });
-        const token = jwt.sign({ id: guest.user_id }, process.env.ACCESS_TOKEN_SECRET);    
-        guest.token = token;
-        await guest.save();
-        const response = {
-            user_id: guest.user_id,
-            is_guest: guest.is_guest,
-            token: guest.token,
-            name: guest.name
-        };
-        res.status(200).json(response);
-    } catch (error) {
-        res.status(500).json({ message: 'Internal Server Error' });
-    }
-};
+// exports.createGuestUser = async (req, res) => {       
+//     try {
+//         let userId = generateUserId();
+//         while (await User.findOne({ where: { user_id: userId } })) {
+//             userId = generateUserId();
+//         }
+//         const guest = await User.create({
+//             is_guest: true,
+//             user_id: userId,
+//             name:'Guest'
+//         });
+//         const token = jwt.sign({ id: guest.user_id }, process.env.ACCESS_TOKEN_SECRET);    
+//         guest.token = token;
+//         await guest.save();
+//         const response = {
+//             user_id: guest.user_id,
+//             is_guest: guest.is_guest,
+//             token: guest.token,
+//             name: guest.name
+//         };
+//         res.status(200).json(response);
+//     } catch (error) {
+//         res.status(500).json({ message: 'Internal Server Error' });
+//     }
+// };
 
+// exports.createUser = async (req, res) => {
+//     const { name, uuid, mobile, email } = req.body;
+//     if (!mobile && !email) {
+//         return res.status(400).json({ message: 'Invalid request' });
+//     }
+//     if (!name || !uuid) {
+//         return res.status(400).json({ message: 'Invalid request' });
+//     }
+//     try {
+//         let user;
+//         if (email) {
+//             user = await User.findOne({ where: { email: email } });
+//             if (user) {
+//                 let profileUrl;
+//                 if (user.profile) {
+//                     const command = new GetObjectCommand({
+//                         Bucket: process.env.BUCKET_NAME,
+//                         Key: user.profile,
+//                     });
+//                     profileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+//                 }
+//                 const token = jwt.sign({ id: user.user_id }, process.env.ACCESS_TOKEN_SECRET, {expiresIn:'7d'});
+//                 // user.token = token;
+//                 await user.save();
+
+//                 return res.status(200).json({
+//                     success: true,
+//                     message: 'User login success',
+//                     data: {
+//                         user_id:user.user_id,
+//                         name:user.name,
+//                         token: token,
+//                         profile: profileUrl,
+//                         mobile_number: user.mobile_number,
+//                         email:user.email,
+//                         is_guest:user.is_guest,
+//                         description:user.description,
+//                     }
+//                 });
+//             } else {
+//                 user = new User({
+//                     name,
+//                     user_id: generateUserId(),
+//                     email,
+//                     email_uid:uuid,
+//                 });
+//                 await user.save();
+//                 const token = jwt.sign({ id: user.user_id }, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '7d'});
+//                 // user.token = token;
+//                 await user.save();
+
+//                 return res.status(200).json({
+//                     success: true,
+//                     message: 'User login success',
+//                     data: {
+//                         user_id:user.user_id,
+//                         name:user.name,
+//                         token: token,
+//                         profile: user.profile,
+//                         mobile_number: user.mobile_number,
+//                         email:user.email,
+//                         is_guest:user.is_guest,
+//                         description:user.description,
+//                     }
+//                 });
+//             }
+//         }
+//     } catch (error) {
+//         return res.status(500).json({ message: 'Internal Server error', error });
+//     }
+// };
+
+//done -- meg
 exports.createUser = async (req, res) => {
     const { name, uuid, mobile, email } = req.body;
+
+    // Validate request
     if (!mobile && !email) {
-        return res.status(400).json({ message: 'Invalid request' });
+        return res.status(400).json({ message: 'Invalid request: Mobile or Email is required' });
     }
     if (!name || !uuid) {
-        return res.status(400).json({ message: 'Invalid request' });
+        return res.status(400).json({ message: 'Invalid request: Name and UUID are required' });
     }
+
     try {
-        let user;
-        if (email) {
-            user = await User.findOne({ where: { email: email } });
-            if (user) {
-                let profileUrl;
-                if (user.profile) {
-                    const command = new GetObjectCommand({
-                        Bucket: process.env.BUCKET_NAME,
-                        Key: user.profile,
-                    });
-                    profileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
-                }
-                const token = jwt.sign({ id: user.user_id }, process.env.ACCESS_TOKEN_SECRET);
-                user.token = token;
-                await user.save();
+        let user = await User.findOne({ where: { email } });
 
-                return res.status(200).json({
-                    success: true,
-                    message: 'User login success',
-                    data: {
-                        user_id:user.user_id,
-                        name:user.name,
-                        token: token,
-                        profile: profileUrl,
-                        mobile_number: user.mobile_number,
-                        email:user.email,
-                        is_guest:user.is_guest,
-                        description:user.description,
-                    }
-                });
-            } else {
-                user = new User({
-                    name,
-                    user_id: generateUserId(),
-                    email,
-                    email_uid:uuid,
-                });
-                await user.save();
-                const token = jwt.sign({ id: user.user_id }, process.env.ACCESS_TOKEN_SECRET);
-                user.token = token;
-                await user.save();
+        if (user) {
+            let profileUrl = null;
 
-                return res.status(200).json({
-                    success: true,
-                    message: 'User login success',
-                    data: {
-                        user_id:user.user_id,
-                        name:user.name,
-                        token: token,
-                        profile: user.profile,
-                        mobile_number: user.mobile_number,
-                        email:user.email,
-                        is_guest:user.is_guest,
-                        description:user.description,
-                    }
+            if (user.profile) {
+                const command = new GetObjectCommand({
+                    Bucket: process.env.BUCKET_NAME,
+                    Key: user.profile,
                 });
+                profileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
             }
+
+            const token = jwt.sign({ id: user.user_id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '7d' });
+
+            // // Set token in HTTP-only cookie
+            // res.cookie('token', token, { httpOnly: true, secure: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+            return res.status(200).json({
+                success: true,
+                message: 'User login successful',
+                data: {
+                    user_id: user.user_id,
+                    name: user.name,
+                    profile: profileUrl,
+                    mobile_number: user.mobile_number,
+                    email: user.email,
+                    token: token,
+                    description: user.description,
+                }
+            });
         }
+
+        // Create a new user
+        user = await User.create({
+            name,
+            user_id: generateUserId(),
+            email,
+            email_uid: uuid,
+        });
+
+        const token = jwt.sign({ id: user.user_id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '7d' });
+
+        // // Set token in HTTP-only cookie
+        // res.cookie('token', token, { httpOnly: true, secure: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+        return res.status(201).json({
+            success: true,
+            message: 'User created successfully',
+            data: {
+                user_id: user.user_id,
+                name: user.name,
+                profile: null,
+                mobile_number: user.mobile_number,
+                email: user.email,
+                token: token,
+                description: user.description,
+            }
+        });
+
     } catch (error) {
-        return res.status(500).json({ message: 'Internal Server error', error });
+        return res.status(500).json({ message: 'Internal Server Error', error });
     }
 };
 
+//done-- meg
 exports.sendOtp = async (req, res) => {
     try {
         const { mobile } = req.body;
@@ -192,6 +271,7 @@ exports.sendOtp = async (req, res) => {
     }
 };
 
+//done -- meg
 exports.verifyOtp = async (req, res) => {
     try {
         const { verificationId, otp, name } = req.body;
@@ -214,8 +294,9 @@ exports.verifyOtp = async (req, res) => {
         }
         let user = await User.findOne({ where: { mobile_number: otpRecord.mobile } });
         if (user) {
-            const token = jwt.sign({ id: user.user_id }, process.env.ACCESS_TOKEN_SECRET);
-            user.set('token', token);
+            const token = jwt.sign({ id: user.user_id }, process.env.ACCESS_TOKEN_SECRET,{expiresIn: '7d'});
+
+            // user.set('token', token);
             let profileUrl;
             if (user.profile) {
                 const command = new GetObjectCommand({
@@ -225,6 +306,11 @@ exports.verifyOtp = async (req, res) => {
                 profileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
             }
             user.profile = profileUrl;
+            res.cookie('elkAuthToken', token, {
+                httpOnly: true, // Prevents access to the cookie from JavaScript
+                secure: process.env.NODE_ENV === 'production', // Ensures cookie is sent over HTTPS in production
+                maxAge: 7 * 24 * 60 * 60 * 1000 // Cookie expires in 7 days
+            });
             return res.status(200).json({
                 success: true,
                 message: 'User login success',
@@ -242,10 +328,15 @@ exports.verifyOtp = async (req, res) => {
                 user_id: generateUserId(),
                 mobile_number: otpRecord.mobile,
             });
-            const token = jwt.sign({ id: newUser.user_id }, process.env.ACCESS_TOKEN_SECRET);
-            newUser.set('token', token);
-            newUser.token = token;
+            const token = jwt.sign({ id: newUser.user_id }, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '7d'});
+            // newUser.set('token', token);
+            // newUser.token = token;
             await newUser.save();
+            // res.cookie('elkAuthToken', token, {
+            //     httpOnly: true, // Prevents access to the cookie from JavaScript
+            //     secure: process.env.NODE_ENV === 'production', // Ensures cookie is sent over HTTPS in production
+            //     maxAge: 7 * 24 * 60 * 60 * 1000 // Cookie expires in 7 days
+            // });
             return res.status(200).json({
                 success: true,
                 message: 'User registration success',
@@ -262,6 +353,7 @@ exports.verifyOtp = async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
+
 
 exports.verifyUpdateMobileOtp = async (req, res) => {
     try {
@@ -286,6 +378,7 @@ exports.verifyUpdateMobileOtp = async (req, res) => {
     }
 };
 
+
 exports.getUserById = async (req, res) => {
     const id = req.query.id;
     try {
@@ -307,6 +400,7 @@ exports.getUserById = async (req, res) => {
         res.status(500).send({ message: 'Error retrieving user'+err });
     }
 };
+
 
 exports.updateProfilePic = async (req, res) => {    
     const id = req.query.id;
@@ -337,6 +431,7 @@ exports.updateProfilePic = async (req, res) => {
     }
 };
 
+
 exports.updateEmailOrMobile = async (req, res) => {
     try {
         const { email, mobile, uid, user_id } = req.body;
@@ -364,6 +459,7 @@ exports.updateEmailOrMobile = async (req, res) => {
     }
 };
 
+
 exports.updateProfile = async (req, res) => {
     const { name, description, user_id } = req.body;
     const errors = validationResult(req);
@@ -388,6 +484,7 @@ exports.updateProfile = async (req, res) => {
     }
 };
 
+
 exports.updateNotificationToken = async (req, res) => {
     try {
         const { notification_token } = req.body;
@@ -406,6 +503,7 @@ exports.updateNotificationToken = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
 
 exports.userWithAds = async (req, res) => {
     try {
@@ -428,66 +526,127 @@ exports.userWithAds = async (req, res) => {
             ],
             nest: true
         })
-        const response={
+
+        console.log(user)
+        // const response={
+        //     id: user.dataValues.id,
+        //     user_id: user.dataValues.user_id,
+        //     // is_guest: user.dataValues.is_guest,
+        //     name: user.dataValues.name,
+        //     email_uid: user.dataValues.email_uid,
+        //     profile: user.dataValues.profile?await getImageUrl(user.dataValues.profile):null,
+        //     description: user.dataValues.description,
+        //     notification_token: user.dataValues.notification_token,
+        //     ads: user.dataValues.ads?.length ?await Promise.all(
+        //         user.dataValues.ads.map(async (ad) => {
+        //             return{
+        //                 id: ad.dataValues.ad_id,
+        //                 ad_id: ad.dataValues.ad_id,
+        //                 user_id: ad.dataValues.user_id,
+        //                 title: ad.dataValues.title,
+        //                 category: ad.dataValues.category,
+        //                 description: ad.dataValues.description,
+        //                 ad_type: ad.dataValues.ad_type,
+        //                 ad_status: ad.dataValues.ad_status,
+        //                 ad_stage: ad.dataValues.ad_stage,
+        //                 createdAt: ad.dataValues.createdAt.toISOString(),
+        //                 updatedAt: ad.dataValues.updatedAt.toISOString(),
+        //                 ad_price_details: ad.dataValues.ad_price_details.map(priceDetail => ({
+        //                     id: priceDetail.dataValues.id,
+        //                     ad_id: priceDetail.dataValues.ad_id,
+        //                     rent_duration: priceDetail.dataValues.rent_duration,
+        //                     rent_price: priceDetail.dataValues.rent_price,
+        //                     createdAt: priceDetail.dataValues.createdAt.toISOString(),
+        //                     updatedAt: priceDetail.dataValues.updatedAt.toISOString()
+        //                 })),
+        //                 ad_images: user.dataValues.ads?.length ?await Promise.all(
+        //                     ad.dataValues.ad_images.map(async (image) => {
+        //                     return{
+        //                         id: image.dataValues.id,
+        //                         ad_id: image.dataValues.ad_id,
+        //                         image: image.dataValues.image?await getImageUrl(image.image):null,
+        //                         createdAt: image.dataValues.createdAt.toISOString(),
+        //                         updatedAt: image.dataValues.updatedAt.toISOString()
+        //                     }})),
+        //                 ad_location: {
+        //                     id: ad.dataValues.ad_location.id,
+        //                     ad_id: ad.dataValues.ad_location.ad_id,
+        //                     locality: ad.dataValues.ad_location.locality,
+        //                     place: ad.dataValues.ad_location.place,
+        //                     district: ad.dataValues.ad_location.district,
+        //                     state: ad.dataValues.ad_location.state,
+        //                     country: ad.dataValues.ad_location.country,
+        //                     longitude: `${ad.dataValues.ad_location.longitude}`,
+        //                     latitude: `${ad.dataValues.ad_location.latitude}`,
+        //                     createdAt: ad.dataValues.ad_location.createdAt.toISOString(),
+        //                     updatedAt: ad.dataValues.ad_location.updatedAt.toISOString()
+        //                 },
+        //             }
+        //         }
+        //     )),
+        // }
+
+        const response = {
             id: user.dataValues.id,
             user_id: user.dataValues.user_id,
-            is_guest: user.dataValues.is_guest,
             name: user.dataValues.name,
             email_uid: user.dataValues.email_uid,
-            profile: user.dataValues.profile?await getImageUrl(user.dataValues.profile):null,
+            profile: user.dataValues.profile ? await getImageUrl(user.dataValues.profile) : null,
             description: user.dataValues.description,
             notification_token: user.dataValues.notification_token,
-            ads: await Promise.all(
-                user.dataValues.ads.map(async (ad) => {
-                    return{
-                        id: ad.dataValues.ad_id,
-                        ad_id: ad.dataValues.ad_id,
-                        user_id: ad.dataValues.user_id,
-                        title: ad.dataValues.title,
-                        category: ad.dataValues.category,
-                        description: ad.dataValues.description,
-                        ad_type: ad.dataValues.ad_type,
-                        ad_status: ad.dataValues.ad_status,
-                        ad_stage: ad.dataValues.ad_stage,
-                        createdAt: ad.dataValues.createdAt.toISOString(),
-                        updatedAt: ad.dataValues.updatedAt.toISOString(),
-                        ad_price_details: ad.dataValues.ad_price_details.map(priceDetail => ({
-                            id: priceDetail.dataValues.id,
-                            ad_id: priceDetail.dataValues.ad_id,
-                            rent_duration: priceDetail.dataValues.rent_duration,
-                            rent_price: priceDetail.dataValues.rent_price,
-                            createdAt: priceDetail.dataValues.createdAt.toISOString(),
-                            updatedAt: priceDetail.dataValues.updatedAt.toISOString()
-                        })),
-                        ad_images: await Promise.all(
-                            ad.dataValues.ad_images.map(async (image) => {
-                            return{
-                                id: image.dataValues.id,
-                                ad_id: image.dataValues.ad_id,
-                                image: image.dataValues.image?await getImageUrl(image.image):null,
-                                createdAt: image.dataValues.createdAt.toISOString(),
-                                updatedAt: image.dataValues.updatedAt.toISOString()
-                            }})),
-                        ad_location: {
-                            id: ad.dataValues.ad_location.id,
-                            ad_id: ad.dataValues.ad_location.ad_id,
-                            locality: ad.dataValues.ad_location.locality,
-                            place: ad.dataValues.ad_location.place,
-                            district: ad.dataValues.ad_location.district,
-                            state: ad.dataValues.ad_location.state,
-                            country: ad.dataValues.ad_location.country,
-                            longitude: `${ad.dataValues.ad_location.longitude}`,
-                            latitude: `${ad.dataValues.ad_location.latitude}`,
-                            createdAt: ad.dataValues.ad_location.createdAt.toISOString(),
-                            updatedAt: ad.dataValues.ad_location.updatedAt.toISOString()
-                        },
-                    }
-                }
-            )),
-        }
+            ads: user.dataValues.ads?.length ? await Promise.all(
+                user.dataValues.ads.map(async (ad) => ({
+                    id: ad.dataValues.ad_id,
+                    ad_id: ad.dataValues.ad_id,
+                    user_id: ad.dataValues.user_id,
+                    title: ad.dataValues.title,
+                    category: ad.dataValues.category,
+                    description: ad.dataValues.description,
+                    ad_type: ad.dataValues.ad_type,
+                    ad_status: ad.dataValues.ad_status,
+                    ad_stage: ad.dataValues.ad_stage,
+                    createdAt: ad.dataValues.createdAt.toISOString(),
+                    updatedAt: ad.dataValues.updatedAt.toISOString(),
+                    ad_price_details: ad.dataValues.ad_price_details?.map(priceDetail => ({
+                        id: priceDetail.dataValues.id,
+                        ad_id: priceDetail.dataValues.ad_id,
+                        rent_duration: priceDetail.dataValues.rent_duration,
+                        rent_price: priceDetail.dataValues.rent_price,
+                        createdAt: priceDetail.dataValues.createdAt.toISOString(),
+                        updatedAt: priceDetail.dataValues.updatedAt.toISOString()
+                    })) || [],
+                    ad_images: ad.dataValues.ad_images?.length ? await Promise.all(
+                        ad.dataValues.ad_images.map(async (image) => ({
+                            id: image.dataValues.id,
+                            ad_id: image.dataValues.ad_id,
+                            image: image.dataValues.image ? await getImageUrl(image.image) : null,
+                            createdAt: image.dataValues.createdAt.toISOString(),
+                            updatedAt: image.dataValues.updatedAt.toISOString()
+                        }))
+                    ) : [],
+                    ad_location: ad.dataValues.ad_location ? {
+                        id: ad.dataValues.ad_location.id,
+                        ad_id: ad.dataValues.ad_location.ad_id,
+                        locality: ad.dataValues.ad_location.locality,
+                        place: ad.dataValues.ad_location.place,
+                        district: ad.dataValues.ad_location.district,
+                        state: ad.dataValues.ad_location.state,
+                        country: ad.dataValues.ad_location.country,
+                        longitude: `${ad.dataValues.ad_location.longitude}`,
+                        latitude: `${ad.dataValues.ad_location.latitude}`,
+                        createdAt: ad.dataValues.ad_location.createdAt.toISOString(),
+                        updatedAt: ad.dataValues.ad_location.updatedAt.toISOString()
+                    } : null
+                }))
+            ) : []
+        };
+        
+
+        console.log(response)
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
-        }console.log(response.ads[0].ad_images);
+        }
+        console.log(response.ads[0].ad_images);
         
         return res.status(200).json(response);
     } catch (error) {

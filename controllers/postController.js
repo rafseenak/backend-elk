@@ -29,6 +29,7 @@ async function getImageUrl(imageKey) {
     });
     const url = `https://${process.env.BUCKET_NAME}.s3.${process.env.BUCKET_REGION}.amazonaws.com/${imageKey}`;
     const signedUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+    console.log(signedUrl)
     return signedUrl;
 }
 
@@ -330,7 +331,14 @@ exports.getAdDetails = async (req, res) => {
 
 exports.myAds = async (req, res) => {
     try {
-        const userId = req.user.id;    
+        console.log('meghhaaa..11111')
+        if (req.user && req.user.id){
+
+        console.log('meghhaaa..')
+
+        
+        const userId = req.user.id;
+        console.log('userid....',userId)    
         const ads = await Ad.findAll({
             where: { user_id: userId, ad_stage: 3 },
             attributes: {
@@ -374,7 +382,7 @@ exports.myAds = async (req, res) => {
                     "profile": ad.dataValues.user.profile?await getImageUrl(ad.dataValues.user.profile):null,
                     "description": ad.dataValues.user.description,
                     "notification_token": ad.dataValues.user.notification_token,
-                    "token": ad.dataValues.user.token,
+                    // "token": ad.dataValues.user.token,
                     "createdAt": ad.dataValues.user.createdAt.toISOString(),
                     "updatedAt": ad.dataValues.user.updatedAt.toISOString()
                 } : null,
@@ -415,6 +423,11 @@ exports.myAds = async (req, res) => {
             };
         }));
         res.status(200).json(formattedAds);
+        }
+        else{
+            console.log('hi..')
+            res.status(200).json({ message: 'not logged' });
+        }
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
     }
@@ -531,167 +544,332 @@ exports.searchCategories = async (req, res) => {
     }
 };
 
+// exports.recommentedPosts = async (req, res) => {
+//     try {
+//         console.log('start,,,,')
+//         const page = req.body.page;
+//         const perPage = 16;
+//         const offset = (page - 1) * perPage;
+
+//         const userSearches = await UserSearch.findAll({
+//             where: {
+//                 user_id: req.user.id
+//             },
+//             order: [['createdAt', 'ASC']],
+//             limit: 2,
+//             raw: true,
+//             nest: true
+//         });
+//         let adsQuery = {
+//             where: { 
+//                 ad_status: 'online',
+//                 user_id: { [Op.ne]: req.user.id },
+//                 ad_type:"rent"
+//             },
+//             include: [
+//                 { model: User, as: 'user' },
+//                 { model: AdImage, as: 'ad_images' },
+//                 { model: AdPriceDetails, as: 'ad_price_details' },
+//             ],
+//             distinct: true,
+//             limit: perPage,
+//             offset: offset,
+//         };
+//         if (userSearches.length !== 0) {
+//             if (userSearches[0].location_type === 'locality' || userSearches[0].location_type === 'place') {
+//                 adsQuery.include.push({
+//                     model: AdLocation,
+//                     as: 'ad_location',
+//                     where: {
+//                         [Op.or]: [
+//                             { locality: userSearches[0].location },
+//                             { place: userSearches[0].location }
+//                         ]
+//                     }
+//                 });
+//             }else{
+//                 adsQuery.include.push({
+//                     model: AdLocation,
+//                     as: 'ad_location',
+//                     where: {
+//                         [Op.or]: [
+//                             { state: userSearches[0].location },
+//                             { country: userSearches[0].location }
+//                         ]
+//                     }
+//                 });
+//             }
+//             adsQuery.attributes={
+//                 include:[
+//                     [
+//                         literal(`(
+//                             SELECT (6371 * 
+//                                 acos(cos(radians(${userSearches[0].latitude})) * cos(radians(ad_location.latitude)) * 
+//                                 cos(radians(ad_location.longitude) - radians(${userSearches[0].longitude})) + 
+//                                 sin(radians(${userSearches[0].latitude})) * sin(radians(ad_location.latitude)))
+//                             ) AS distance
+//                         )`), 'distance'
+//                     ],
+//                 ]
+//             };
+//             adsQuery.order = [
+//                 [sequelize.literal('distance'), 'ASC']
+//             ];
+//         }else{
+//             adsQuery.include.push({
+//                 model: AdLocation,
+//                 as: "ad_location"
+//             })
+//         }
+//         const { count, rows: ads } = await Ad.findAndCountAll(adsQuery);
+//         const totalPages = Math.ceil(count / perPage);      
+//         const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl.split('?')[0]}`;
+//         const buildUrl = (pageNum) => `${fullUrl}?page=${pageNum}`;
+//         const response = {
+//             current_page: page,
+//             data: await Promise.all(
+//                 ads.map(async (ad) => {
+//                     return{
+//                         id: ad.dataValues.ad_id,
+//                         ad_id: ad.dataValues.ad_id,
+//                         user_id: ad.dataValues.user_id,
+//                         title: ad.dataValues.title,
+//                         category: ad.dataValues.category,
+//                         description: ad.dataValues.description,
+//                         ad_type: ad.dataValues.ad_type,
+//                         ad_status: ad.dataValues.ad_status,
+//                         ad_stage: ad.dataValues.ad_stage,
+//                         distance: ad.dataValues.distance?ad.dataValues.distance:null,
+//                         createdAt: ad.dataValues.createdAt.toISOString(),
+//                         updatedAt: ad.dataValues.updatedAt.toISOString(),
+//                         ad_price_details: ad.dataValues.ad_price_details.map(priceDetail => ({
+//                             id: priceDetail.dataValues.id,
+//                             ad_id: priceDetail.dataValues.ad_id,
+//                             rent_duration: priceDetail.dataValues.rent_duration,
+//                             rent_price: priceDetail.dataValues.rent_price,
+//                             createdAt: priceDetail.dataValues.createdAt.toISOString(),
+//                             updatedAt: priceDetail.dataValues.updatedAt.toISOString()
+//                         })),
+//                         ad_images: await Promise.all(
+//                             ad.dataValues.ad_images.map(async (image) => {
+//                             return{
+//                                 id: image.dataValues.id,
+//                                 ad_id: image.dataValues.ad_id,
+//                                 image: image.dataValues.image?await getImageUrl(image.image):null,
+//                                 createdAt: image.dataValues.createdAt.toISOString(),
+//                                 updatedAt: image.dataValues.updatedAt.toISOString()
+//                             }})),
+//                         ad_location: {
+//                             id: ad.dataValues.ad_location.id,
+//                             ad_id: ad.dataValues.ad_location.ad_id,
+//                             locality: ad.dataValues.ad_location.locality,
+//                             place: ad.dataValues.ad_location.place,
+//                             district: ad.dataValues.ad_location.district,
+//                             state: ad.dataValues.ad_location.state,
+//                             country: ad.dataValues.ad_location.country,
+//                             longitude: `${ad.dataValues.ad_location.longitude}`,
+//                             latitude: `${ad.dataValues.ad_location.latitude}`,
+//                             createdAt: ad.dataValues.ad_location.createdAt.toISOString(),
+//                             updatedAt: ad.dataValues.ad_location.updatedAt.toISOString()
+//                         },
+//                     }
+//                 }
+//             )),
+//             first_page_url: buildUrl(1),
+//             from: offset+1,
+//             last_page: totalPages,
+//             last_page_url: buildUrl(totalPages),
+//             links: links = [
+//                 {
+//                     url: page > 1 ? buildUrl(page - 1) : null,
+//                     label: "&laquo; Previous",
+//                     active: page > 1
+//                 },
+//                 {
+//                     url: buildUrl(page),
+//                     label: `${page}`,
+//                     active: true
+//                 },
+//                 {
+//                     url: page < totalPages ? buildUrl(page + 1) : null,
+//                     label: "Next &raquo;",
+//                     active: page < totalPages
+//                 }
+//             ],
+//             next_page_url: page < totalPages ? buildUrl(page + 1) : null,
+//             path: fullUrl,
+//             per_page: perPage,
+//             prev_page_url: page > 1 ? buildUrl(page - 1) : null,
+//             to: Math.min(offset + perPage, count),
+//             total: count
+//         }
+//         res.status(200).json(response);
+//     } catch (error) {
+//         console.log(error);
+//         res.status(500).json({ message: 'Server error' });
+//     }
+// };
+
+//done -- megha
+
 exports.recommentedPosts = async (req, res) => {
     try {
-        const page = req.body.page;
+        const page = req.body.page || 1;
         const perPage = 16;
         const offset = (page - 1) * perPage;
 
-        const userSearches = await UserSearch.findAll({
-            where: {
-                user_id: req.user.id
-            },
-            order: [['createdAt', 'ASC']],
-            limit: 2,
-            raw: true,
-            nest: true
-        });
+        let userSearches = [];
+        if (req.user) {
+            userSearches = await UserSearch.findAll({
+                where: {
+                    user_id: req.user.id
+                },
+                order: [['createdAt', 'ASC']],
+                limit: 2,
+                raw: true,
+                nest: true
+            });
+        }
+
         let adsQuery = {
             where: { 
                 ad_status: 'online',
-                user_id: { [Op.ne]: req.user.id },
-                ad_type:"rent"
+                ad_type: "rent"
             },
             include: [
                 { model: User, as: 'user' },
                 { model: AdImage, as: 'ad_images' },
                 { model: AdPriceDetails, as: 'ad_price_details' },
+                { model: AdLocation, as: 'ad_location' },
             ],
             distinct: true,
             limit: perPage,
             offset: offset,
         };
-        if (userSearches.length !== 0) {
-            if (userSearches[0].location_type === 'locality' || userSearches[0].location_type === 'place') {
-                adsQuery.include.push({
-                    model: AdLocation,
-                    as: 'ad_location',
-                    where: {
-                        [Op.or]: [
-                            { locality: userSearches[0].location },
-                            { place: userSearches[0].location }
-                        ]
-                    }
-                });
-            }else{
-                adsQuery.include.push({
-                    model: AdLocation,
-                    as: 'ad_location',
-                    where: {
-                        [Op.or]: [
-                            { state: userSearches[0].location },
-                            { country: userSearches[0].location }
-                        ]
-                    }
-                });
+
+        if (req.user && userSearches.length !== 0) {
+            const search = userSearches[0];
+            if (search.location_type === 'locality' || search.location_type === 'place') {
+                adsQuery.include.find(i => i.as === 'ad_location').where = {
+                    [Op.or]: [
+                        { locality: search.location },
+                        { place: search.location }
+                    ]
+                };
+            } else {
+                adsQuery.include.find(i => i.as === 'ad_location').where = {
+                    [Op.or]: [
+                        { state: search.location },
+                        { country: search.location }
+                    ]
+                };
             }
-            adsQuery.attributes={
-                include:[
+            adsQuery.attributes = {
+                include: [
                     [
                         literal(`(
                             SELECT (6371 * 
-                                acos(cos(radians(${userSearches[0].latitude})) * cos(radians(ad_location.latitude)) * 
-                                cos(radians(ad_location.longitude) - radians(${userSearches[0].longitude})) + 
-                                sin(radians(${userSearches[0].latitude})) * sin(radians(ad_location.latitude)))
-                            ) AS distance
+                                acos(cos(radians(${search.latitude})) * cos(radians(ad_location.latitude)) * 
+                                cos(radians(ad_location.longitude) - radians(${search.longitude})) + 
+                                sin(radians(${search.latitude})) * sin(radians(ad_location.latitude)))
+                            )
                         )`), 'distance'
                     ],
                 ]
             };
-            adsQuery.order = [
-                [sequelize.literal('distance'), 'ASC']
-            ];
-        }else{
-            adsQuery.include.push({
-                model: AdLocation,
-                as: "ad_location"
-            })
+            adsQuery.order = [[sequelize.literal('distance'), 'ASC']];
+        } else if (!req.user) {
+            // Default recommendation for unauthenticated users
+            adsQuery.order = [['createdAt', 'DESC']]; // Example: Recent ads
         }
+
         const { count, rows: ads } = await Ad.findAndCountAll(adsQuery);
-        const totalPages = Math.ceil(count / perPage);      
+        const totalPages = Math.ceil(count / perPage);
         const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl.split('?')[0]}`;
         const buildUrl = (pageNum) => `${fullUrl}?page=${pageNum}`;
+
         const response = {
-            current_page: page,
-            data: await Promise.all(
-                ads.map(async (ad) => {
-                    return{
-                        id: ad.dataValues.ad_id,
-                        ad_id: ad.dataValues.ad_id,
-                        user_id: ad.dataValues.user_id,
-                        title: ad.dataValues.title,
-                        category: ad.dataValues.category,
-                        description: ad.dataValues.description,
-                        ad_type: ad.dataValues.ad_type,
-                        ad_status: ad.dataValues.ad_status,
-                        ad_stage: ad.dataValues.ad_stage,
-                        distance: ad.dataValues.distance?ad.dataValues.distance:null,
-                        createdAt: ad.dataValues.createdAt.toISOString(),
-                        updatedAt: ad.dataValues.updatedAt.toISOString(),
-                        ad_price_details: ad.dataValues.ad_price_details.map(priceDetail => ({
-                            id: priceDetail.dataValues.id,
-                            ad_id: priceDetail.dataValues.ad_id,
-                            rent_duration: priceDetail.dataValues.rent_duration,
-                            rent_price: priceDetail.dataValues.rent_price,
-                            createdAt: priceDetail.dataValues.createdAt.toISOString(),
-                            updatedAt: priceDetail.dataValues.updatedAt.toISOString()
-                        })),
-                        ad_images: await Promise.all(
-                            ad.dataValues.ad_images.map(async (image) => {
-                            return{
-                                id: image.dataValues.id,
-                                ad_id: image.dataValues.ad_id,
-                                image: image.dataValues.image?await getImageUrl(image.image):null,
-                                createdAt: image.dataValues.createdAt.toISOString(),
-                                updatedAt: image.dataValues.updatedAt.toISOString()
-                            }})),
-                        ad_location: {
-                            id: ad.dataValues.ad_location.id,
-                            ad_id: ad.dataValues.ad_location.ad_id,
-                            locality: ad.dataValues.ad_location.locality,
-                            place: ad.dataValues.ad_location.place,
-                            district: ad.dataValues.ad_location.district,
-                            state: ad.dataValues.ad_location.state,
-                            country: ad.dataValues.ad_location.country,
-                            longitude: `${ad.dataValues.ad_location.longitude}`,
-                            latitude: `${ad.dataValues.ad_location.latitude}`,
-                            createdAt: ad.dataValues.ad_location.createdAt.toISOString(),
-                            updatedAt: ad.dataValues.ad_location.updatedAt.toISOString()
-                        },
+                        current_page: page,
+                        data: await Promise.all(
+                            ads.map(async (ad) => {
+                                return{
+                                    id: ad.dataValues.ad_id,
+                                    ad_id: ad.dataValues.ad_id,
+                                    user_id: ad.dataValues.user_id,
+                                    title: ad.dataValues.title,
+                                    category: ad.dataValues.category,
+                                    description: ad.dataValues.description,
+                                    ad_type: ad.dataValues.ad_type,
+                                    ad_status: ad.dataValues.ad_status,
+                                    ad_stage: ad.dataValues.ad_stage,
+                                    distance: ad.dataValues.distance?ad.dataValues.distance:null,
+                                    createdAt: ad.dataValues.createdAt.toISOString(),
+                                    updatedAt: ad.dataValues.updatedAt.toISOString(),
+                                    ad_price_details: ad.dataValues.ad_price_details.map(priceDetail => ({
+                                        id: priceDetail.dataValues.id,
+                                        ad_id: priceDetail.dataValues.ad_id,
+                                        rent_duration: priceDetail.dataValues.rent_duration,
+                                        rent_price: priceDetail.dataValues.rent_price,
+                                        createdAt: priceDetail.dataValues.createdAt.toISOString(),
+                                        updatedAt: priceDetail.dataValues.updatedAt.toISOString()
+                                    })),
+                                    ad_images: await Promise.all(
+                                        ad.dataValues.ad_images.map(async (image) => {
+                                        return{
+                                            id: image.dataValues.id,
+                                            ad_id: image.dataValues.ad_id,
+                                            image: image.dataValues.image?await getImageUrl(image.image):null,
+                                            createdAt: image.dataValues.createdAt.toISOString(),
+                                            updatedAt: image.dataValues.updatedAt.toISOString()
+                                        }})),
+                                    ad_location: {
+                                        id: ad.dataValues.ad_location.id,
+                                        ad_id: ad.dataValues.ad_location.ad_id,
+                                        locality: ad.dataValues.ad_location.locality,
+                                        place: ad.dataValues.ad_location.place,
+                                        district: ad.dataValues.ad_location.district,
+                                        state: ad.dataValues.ad_location.state,
+                                        country: ad.dataValues.ad_location.country,
+                                        longitude: `${ad.dataValues.ad_location.longitude}`,
+                                        latitude: `${ad.dataValues.ad_location.latitude}`,
+                                        createdAt: ad.dataValues.ad_location.createdAt.toISOString(),
+                                        updatedAt: ad.dataValues.ad_location.updatedAt.toISOString()
+                                    },
+                                }
+                            }
+                        )),
+                        first_page_url: buildUrl(1),
+                        from: offset+1,
+                        last_page: totalPages,
+                        last_page_url: buildUrl(totalPages),
+                        links: links = [
+                            {
+                                url: page > 1 ? buildUrl(page - 1) : null,
+                                label: "&laquo; Previous",
+                                active: page > 1
+                            },
+                            {
+                                url: buildUrl(page),
+                                label: `${page}`,
+                                active: true
+                            },
+                            {
+                                url: page < totalPages ? buildUrl(page + 1) : null,
+                                label: "Next &raquo;",
+                                active: page < totalPages
+                            }
+                        ],
+                        next_page_url: page < totalPages ? buildUrl(page + 1) : null,
+                        path: fullUrl,
+                        per_page: perPage,
+                        prev_page_url: page > 1 ? buildUrl(page - 1) : null,
+                        to: Math.min(offset + perPage, count),
+                        total: count
                     }
-                }
-            )),
-            first_page_url: buildUrl(1),
-            from: offset+1,
-            last_page: totalPages,
-            last_page_url: buildUrl(totalPages),
-            links: links = [
-                {
-                    url: page > 1 ? buildUrl(page - 1) : null,
-                    label: "&laquo; Previous",
-                    active: page > 1
-                },
-                {
-                    url: buildUrl(page),
-                    label: `${page}`,
-                    active: true
-                },
-                {
-                    url: page < totalPages ? buildUrl(page + 1) : null,
-                    label: "Next &raquo;",
-                    active: page < totalPages
-                }
-            ],
-            next_page_url: page < totalPages ? buildUrl(page + 1) : null,
-            path: fullUrl,
-            per_page: perPage,
-            prev_page_url: page > 1 ? buildUrl(page - 1) : null,
-            to: Math.min(offset + perPage, count),
-            total: count
-        }
+
         res.status(200).json(response);
     } catch (error) {
-        console.log(error);
+        console.error(error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -905,6 +1083,10 @@ exports.rentCategoryPosts = async (req, res) => {
     }
 };
 
+
+
+
+
 exports.bestServiceProviders = async (req, res) => {
     try {
         const perPage = 10;
@@ -917,7 +1099,7 @@ exports.bestServiceProviders = async (req, res) => {
             where: {
                 ad_type: 'service',
                 ad_status: 'online',
-                user_id:{ [Op.ne]: req.user.id }
+                // user_id:{ [Op.ne]: req.user.id }
             },
             attributes: {
                 include: [
@@ -949,6 +1131,11 @@ exports.bestServiceProviders = async (req, res) => {
             limit: perPage,
             offset: offset,
         }; 
+
+        if (req.user) {
+                        adsQuery.where.user_id = { [Op.ne]: req.user.id };
+        }
+        
         if (location_type === 'locality' || location_type === 'place') {
             adsQuery.include.push({
                 model: AdLocation,
@@ -1063,6 +1250,149 @@ exports.bestServiceProviders = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
+// exports.bestServiceProviders = async (req, res) => {
+//     try {
+//         const perPage = 10;
+//         const { location_type, location, latitude, longitude, page = 1 } = req.body;
+//         const offset = (page - 1) * perPage;
+
+        
+//         if (!location_type || !location || !latitude || !longitude) {
+//             return res.status(400).json({ message: 'Invalid request' });
+//         }
+
+//         let adsQuery = {
+//             where: {
+//                 ad_type: 'service',
+//                 ad_status: 'online',
+//             },
+//             attributes: {
+//                 include: [
+//                     [literal(`(SELECT COUNT(*) FROM ad_wish_lists WHERE ad_wish_lists.ad_id = Ad.ad_id)`), 'ad_wish_lists_count'],
+//                     [literal(`(SELECT COUNT(*) FROM ad_views WHERE ad_views.ad_id = Ad.ad_id)`), 'ad_views_count'],
+//                     [
+//                         literal(`(
+//                             SELECT (6371 * 
+//                                 acos(cos(radians(${latitude})) * cos(radians(ad_location.latitude)) * 
+//                                 cos(radians(ad_location.longitude) - radians(${longitude})) + 
+//                                 sin(radians(${latitude})) * sin(radians(ad_location.latitude)))
+//                             ) AS distance
+//                         )`), 'distance'
+//                     ],
+//                 ]
+//             },
+//             include: [
+//                 { model: User, as: 'user' },
+//                 { model: AdImage, as: 'ad_images' },
+//                 { model: AdPriceDetails, as: 'ad_price_details' },
+//                 {
+//                     model: AdLocation,
+//                     as: 'ad_locations',
+//                     where: location_type === 'locality' || location_type === 'place' 
+//                         ? { [Op.or]: [{ locality: {[Op.like]: location }}, { place: {[Op.like]: location } }] } 
+//                         : { [Op.or]: [{ state: {[Op.like]: location } }, { country: {[Op.like]: location } }] }
+//                 }
+//             ],
+//             order: [
+//                 [sequelize.literal('distance'), 'ASC'],
+//                 [sequelize.literal('ad_wish_lists_count'), 'ASC'],
+//                 [sequelize.literal('ad_views_count'), 'ASC'],
+//             ],
+//             distinct: true,
+//             limit: perPage,
+//             offset: offset,
+//         };
+
+        
+//         if (req.user) {
+//             adsQuery.where.user_id = { [Op.ne]: req.user.id };
+//         }
+
+//         console.log(adsQuery)
+
+
+//         const { count, rows: ads } = await Ad.findAndCountAll(adsQuery);
+//         const totalPages = Math.ceil(count / perPage);
+//         console.log('ads..',ads)
+        
+//         const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl.split('?')[0]}`;
+//         const buildUrl = (pageNum) => `${fullUrl}?page=${pageNum}`;
+
+//         const response = {
+//             current_page: page,
+//             data: await Promise.all(
+//                 ads.map(async (ad) => ({
+//                     id: ad.dataValues.ad_id,
+//                     ad_id: ad.dataValues.ad_id,
+//                     user_id: ad.dataValues.user_id,
+//                     title: ad.dataValues.title,
+//                     category: ad.dataValues.category,
+//                     description: ad.dataValues.description,
+//                     ad_type: ad.dataValues.ad_type,
+//                     ad_status: ad.dataValues.ad_status,
+//                     ad_stage: ad.dataValues.ad_stage,
+//                     ad_wish_lists_count: ad.dataValues.ad_wish_lists_count,
+//                     ad_views_count: ad.dataValues.ad_views_count,
+//                     distance: ad.dataValues.distance,
+//                     createdAt: ad.dataValues.createdAt.toISOString(),
+//                     updatedAt: ad.dataValues.updatedAt.toISOString(),
+//                     ad_price_details: ad.dataValues.ad_price_details.map(priceDetail => ({
+//                         id: priceDetail.dataValues.id,
+//                         ad_id: priceDetail.dataValues.ad_id,
+//                         rent_duration: priceDetail.dataValues.rent_duration,
+//                         rent_price: priceDetail.dataValues.rent_price,
+//                         createdAt: priceDetail.dataValues.createdAt.toISOString(),
+//                         updatedAt: priceDetail.dataValues.updatedAt.toISOString()
+//                     })),
+//                     ad_images: await Promise.all(
+//                         ad.dataValues.ad_images.map(async (image) => ({
+//                             id: image.dataValues.id,
+//                             ad_id: image.dataValues.ad_id,
+//                             image: image.dataValues.image ? await getImageUrl(image.image) : null,
+//                             createdAt: image.dataValues.createdAt.toISOString(),
+//                             updatedAt: image.dataValues.updatedAt.toISOString()
+//                         }))
+//                     ),
+//                     ad_locations: {
+//                         id: ad.dataValues.ad_location.id,
+//                         ad_id: ad.dataValues.ad_location.ad_id,
+//                         locality: ad.dataValues.ad_location.locality,
+//                         place: ad.dataValues.ad_location.place,
+//                         district: ad.dataValues.ad_location.district,
+//                         state: ad.dataValues.ad_location.state,
+//                         country: ad.dataValues.ad_location.country,
+//                         longitude: `${ad.dataValues.ad_location.longitude}`,
+//                         latitude: `${ad.dataValues.ad_location.latitude}`,
+//                         createdAt: ad.dataValues.ad_location.createdAt.toISOString(),
+//                         updatedAt: ad.dataValues.ad_location.updatedAt.toISOString()
+//                     },
+//                 }))
+//             ),
+//             first_page_url: buildUrl(1),
+//             from: offset + 1,
+//             last_page: totalPages,
+//             last_page_url: buildUrl(totalPages),
+//             links: [
+//                 { url: page > 1 ? buildUrl(page - 1) : null, label: "&laquo; Previous", active: page > 1 },
+//                 { url: buildUrl(page), label: `${page}`, active: true },
+//                 { url: page < totalPages ? buildUrl(page + 1) : null, label: "Next &raquo;", active: page < totalPages }
+//             ],
+//             next_page_url: page < totalPages ? buildUrl(page + 1) : null,
+//             path: fullUrl,
+//             per_page: perPage,
+//             prev_page_url: page > 1 ? buildUrl(page - 1) : null,
+//             to: Math.min(offset + perPage, count),
+//             total: count
+//         };
+
+//         res.status(200).json(response);
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ message: 'Server error' });
+//     }
+// };
+
 
 exports.adCategoriesFor = async (req, res) => {
     try {

@@ -10,9 +10,9 @@ const authenticateToken = require('../middlewares/authentication');
 const multer = require('multer');
 const upload = multer();
 
-//completed
+
 //user
-router.get('/create_guest', userController.createGuestUser);
+// router.get('/create_guest', userController.createGuestUser);
 router.post('/send_otp', userController.sendOtp);
 router.post('/verify_otp', userController.verifyOtp);
 router.post('/create_user', userController.createUser);
@@ -51,7 +51,7 @@ router.post('/delete_ad_image',authenticateToken,postController.deletAdImage);
 router.post('/delete_ad',authenticateToken,postController.deleteAd);
 router.get('/get_recent_unsaved_ad',authenticateToken,postController.getRecentUnsavedPost);
 router.post('/change_online_status',authenticateToken,postController.changeOnlineStatus);
-router.post('/recomented_posts',authenticateToken,postController.recommentedPosts);
+router.post('/recomented_posts',authenticateToken, postController.recommentedPosts);
 router.post('/rent_category_posts',authenticateToken,postController.rentCategoryPosts);
 router.post('/categories_search',authenticateToken,postController.searchCategories);
 router.post('/best_service_providers',authenticateToken,postController.bestServiceProviders);
