@@ -68,7 +68,7 @@ const sendSangamamOtp = async (mobile, otp) => {
     const messageContent = `Your OTP for ELK is: ${otp}. Do not share this OTP with anyone.`;
     const message = encodeURIComponent(messageContent);
     const route = "T";
-    const url = `http://fastsms.sangamamonline.in/sendsms?uname=${username}&pwd=${password}&senderid=${sender}&to=${mobile}&msg=${message}&route=${route}`;
+    const url = `https://fastsms.sangamamonline.in/sendsms?uname=${username}&pwd=${password}&senderid=${sender}&to=${mobile}&msg=${message}&route=${route}`;
     return await sendCurl(url);
 };
 
