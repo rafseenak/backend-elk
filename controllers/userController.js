@@ -24,6 +24,7 @@ const PriceCategory = require('../models/priceCategoryModel');
 const SearchCategory = require('../models/searchCategoryModel');
 const UserSearch = require('../models/userSearchModel');
 const sequelize = require('../config/db');
+const crypto = require("crypto");
 
 const generateUserId = () => {
     const timestamp = Date.now();
@@ -43,8 +44,12 @@ const s3 = new S3Client({
 const sendCurl = async (url) => {
     try {
         const response = await axios.get(url);
+        console.log(response.data);
+        
         return response.data;
     } catch (error) {
+        console.log(error);
+        
         return null;
     }
 };
@@ -62,13 +67,25 @@ async function getImageUrl(imageKey) {
 const generateRandomString = () => Math.random().toString(36).substring(2, 15);
 
 const sendSangamamOtp = async (mobile, otp) => {
-    const username = encodeURIComponent("anasvk");
-    const password = encodeURIComponent("16694");
+    const username = encodeURIComponent(process.env.SMS_UNAME);
+    const password = encodeURIComponent(process.env.SMS_PASSWORD);
     const sender = "SGMOLN";
-    const messageContent = `Your OTP for ELK is: ${otp}. Do not share this OTP with anyone.`;
+    const messageContent = `${otp} is your OTP to verify Phone Number . Plz dont share OTP with any one`;
     const message = encodeURIComponent(messageContent);
-    const route = "T";
-    const url = `https://fastsms.sangamamonline.in/sendsms?uname=${username}&pwd=${password}&senderid=${sender}&to=${mobile}&msg=${message}&route=${route}`;
+    const expire = Math.floor(Date.now() / 1000) + 120;
+    const timeKey = crypto.createHash("md5").update('send-sms' + "sms@rits-v1.0" + expire).digest("hex");
+    const timeAccessTokenKey = crypto.createHash("md5").update(process.env.SMS_ACCESS_TOKEN + timeKey).digest("hex");
+    const signature = crypto.createHash("md5").update(timeAccessTokenKey + process.env.SMS_ACCESS_TOKEN_KEY).digest("hex");
+    console.log("Signature:", signature);
+    // const route = "T";
+    const route = 'transactional';
+    const authSignature = signature;
+    const smsHeader = 'SNGMAM';
+    const countryCode = '+91';
+    const templateId = '';
+    const entityId = '';
+    // const url = `https://fastsms.sangamamonline.in/sendsms?uname=${username}&pwd=${password}&senderid=${sender}&to=${mobile}&msg=${message}&route=${route}`;
+    const url = `https://fastsms.sangamamonline.in/api/sms/v1.0/send-sms?accessToken=${process.env.SMS_ACCESS_TOKEN}&expire=${expire}&authSignature=${authSignature}&route=${route}&smsHeader=${smsHeader}&messageContent=${message}&recipients=${mobile}&contentType=text&removeDuplicateNumbers=1&countryCode=${countryCode}`;
     return await sendCurl(url);
 };
 
@@ -196,7 +213,7 @@ exports.sendOtp = async (req, res) => {
         });
         res.json({ message: 'OTP sent', verificationId: verificationId });
     } catch (error) {
-        res.status(500).json({ message: 'Internal Server Error' });
+        res.status(500).json({ message: `Internal Server Error. ${error}` });
     }
 };
 
