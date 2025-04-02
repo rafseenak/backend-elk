@@ -70,7 +70,7 @@ const sendSangamamOtp = async (mobile, otp) => {
     const username = encodeURIComponent(process.env.SMS_UNAME);
     const password = encodeURIComponent(process.env.SMS_PASSWORD);
     const sender = "SGMOLN";
-    const messageContent = `${otp} is your OTP to verify Phone Number . Plz dont share OTP with any one`;
+    const messageContent = `Your OTP for ELK is: ${otp}. Do not share this OTP with anyone.`;
     const message = encodeURIComponent(messageContent);
     const expire = Math.floor(Date.now() / 1000) + 120;
     const timeKey = crypto.createHash("md5").update('send-sms' + "sms@rits-v1.0" + expire).digest("hex");
@@ -80,7 +80,7 @@ const sendSangamamOtp = async (mobile, otp) => {
     // const route = "T";
     const route = 'transactional';
     const authSignature = signature;
-    const smsHeader = 'SNGMAM';
+    const smsHeader = 'SGMOLN';
     const countryCode = '+91';
     const templateId = '';
     const entityId = '';
