@@ -54,6 +54,16 @@ User.init({
     type: DataTypes.STRING,
     allowNull: true,
   },
+  block_status: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
+  is_admin: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  }
 }, {
   sequelize,
   modelName: 'User',

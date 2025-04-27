@@ -1,5 +1,5 @@
 const User = require('../models/userModel');
-const { Op,literal } = require('sequelize');
+const { Op, literal } = require('sequelize');
 const { PutObjectCommand, S3Client, GetObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const AdWishLists = require('../models/adWishListModel');
@@ -16,7 +16,7 @@ require('dotenv').config();
 
 const s3 = new S3Client({
     region: process.env.BUCKET_REGION,
-    credentials:{
+    credentials: {
         accessKeyId: process.env.ACCESS_KEY,
         secretAccessKey: process.env.SECRET_ACCESS_KEY,
     },
@@ -41,7 +41,7 @@ function generateAdId() {
 
 exports.createAd = async (req, res) => {
     const data = req.body;
-    if (!data.title||!data.description||!data.ad_type||!data.category||!data.ad_prices) {
+    if (!data.title || !data.description || !data.ad_type || !data.category || !data.ad_prices) {
         return res.status(400).json({ success: false, message: 'Invalid request' });
     }
     try {
@@ -102,13 +102,14 @@ exports.createAd = async (req, res) => {
 exports.updateAdImage = async (req, res) => {
     const { ad_id, ad_stage, ad_status } = req.query;
     const images = req.files;
+    console.log(req.files);
 
     if (!ad_id) {
         return res.status(400).json({ success: false, message: 'Invalid request' });
     }
-    try{
+    try {
         const adImages = [];
-        if(images || images.length !== 0){
+        if (images || images.length !== 0) {
             for (const image of images) {
                 const fileName = `${ad_id}_${image.originalname}`;
                 const command = new PutObjectCommand({
@@ -130,7 +131,7 @@ exports.updateAdImage = async (req, res) => {
             ad.ad_status = ad_status || 'offline';
             ad.ad_stage = ad_stage || 2;
             await ad.save();
-            await AdImage.bulkCreate(adImages);    
+            await AdImage.bulkCreate(adImages);
         }
         const updatedImages = await AdImage.findAll({ where: { ad_id } });
         for (const image of updatedImages) {
@@ -146,10 +147,11 @@ exports.updateAdImage = async (req, res) => {
             message: 'Image upload success',
             data: updatedImages
         });
-    }catch{
+    } catch (err) {
+        console.log(err);
+
         return res.status(500).json({ success: false, message: 'Server error' });
     }
-
 }
 
 exports.deletAdImage = async (req, res) => {
@@ -158,7 +160,7 @@ exports.deletAdImage = async (req, res) => {
         return res.status(400).json({ message: 'Invalid request' });
     }
     try {
-        const data = await AdImage.findOne({where: {id}});
+        const data = await AdImage.findOne({ where: { id } });
         if (!data) {
             return res.status(404).json({ success: false, message: 'Image not found' });
         }
@@ -167,7 +169,7 @@ exports.deletAdImage = async (req, res) => {
             Key: data.image,
         });
         await s3.send(deleteCommand);
-        await AdImage.destroy({where: {id}});       
+        await AdImage.destroy({ where: { id } });
         return res.status(200).json({ success: true, message: 'Successfully deleted' });
     } catch (err) {
         return res.status(500).json({ success: false, message: 'Delete error' });
@@ -175,17 +177,19 @@ exports.deletAdImage = async (req, res) => {
 }
 
 exports.updateAdAddress = async (req, res) => {
-    const { ad_id, country, latitude, longitude, state, district, locality, ad_stage, ad_status } = req.body;
+    const { ad_id, country, latitude, longitude, state, district, locality, ad_stage, ad_status, place } = req.body;
     if (!ad_id || !country || latitude === undefined || longitude === undefined) {
+        console.log(req.body);
         return res.status(400).json({ success: false, message: 'Invalid request' });
     }
     try {
-        let adLocation = await AdLocation.findOne({ where:{ad_id} });
+        let adLocation = await AdLocation.findOne({ where: { ad_id } });
         if (adLocation) {
             adLocation.country = country;
             adLocation.state = state;
             adLocation.district = district;
             adLocation.locality = locality;
+            adLocation.place = place;
             adLocation.longitude = longitude;
             adLocation.latitude = latitude;
             await adLocation.save();
@@ -196,6 +200,7 @@ exports.updateAdAddress = async (req, res) => {
                 state,
                 district,
                 locality,
+                place,
                 longitude,
                 latitude
             });
@@ -220,7 +225,7 @@ exports.deleteAd = async (req, res) => {
         return res.status(400).json({ message: 'Invalid request' });
     }
     try {
-        const adRows = await Ad.findOne({where:{ad_id:adId}});
+        const adRows = await Ad.findOne({ where: { ad_id: adId } });
         if (!adRows) {
             return res.status(404).json({ message: 'Already deleted' });
         }
@@ -230,20 +235,21 @@ exports.deleteAd = async (req, res) => {
         await AdView.destroy({ where: { ad_id: adId } });
         await AdWishLists.destroy({ where: { ad_id: adId } });
         await Ad.destroy({ where: { ad_id: adId } });
-        console.log('deleted');
-        
         return res.status(200).json({ message: 'Ad deleted' });
     } catch (error) {
-        console.log('error');
         return res.status(500).json({ message: 'Server error' });
     }
 }
 
 exports.getAdDetails = async (req, res) => {
     try {
-        const userId = req.user.id;        
-        const wishLists = await AdWishLists.findAll({ where: { user_id: userId } });
-        const wishListAdIds = wishLists.map(item => item.ad_id);        
+        const userId = req.body.user_id;
+        let wishLists
+        let wishListAdIds
+        if(userId){
+            wishLists = await AdWishLists.findAll({ where: { user_id: userId } });
+            wishListAdIds = wishLists.map(item => item.ad_id);
+        }
         if (!req.body.ad_id) {
             return res.status(400).json({ message: 'Invalid request' });
         }
@@ -253,7 +259,7 @@ exports.getAdDetails = async (req, res) => {
                 { model: User, as: 'user' },
                 { model: AdImage, as: 'ad_images' },
                 { model: AdLocation, as: 'ad_location' },
-                { model: AdPriceDetails, as: 'ad_price_details'},
+                { model: AdPriceDetails, as: 'ad_price_details' },
             ],
             nest: true
         });
@@ -264,8 +270,10 @@ exports.getAdDetails = async (req, res) => {
         ad.user.token = undefined;
         ad.user.createdAt = undefined;
         ad.user.updatedAt = undefined;
-        ad.wishListed = wishListAdIds.includes(ad.ad_id);
-        await insertAdViewCount(userId, ad.ad_id);
+        ad.wishListed = userId?wishListAdIds.includes(ad.ad_id):false;
+        if(userId){
+            await insertAdViewCount(userId, ad.ad_id);
+        }
         const response = {
             id: ad.ad_id,
             ad_id: ad.ad_id,
@@ -289,13 +297,14 @@ exports.getAdDetails = async (req, res) => {
             })),
             ad_images: await Promise.all(
                 ad.ad_images.map(async (image) => {
-                return{
-                    id: image.id,
-                    ad_id: image.ad_id,
-                    image: image.image?await getImageUrl(image.image):null,
-                    createdAt: image.createdAt.toISOString(),
-                    updatedAt: image.updatedAt.toISOString()
-                }})),
+                    return {
+                        id: image.id,
+                        ad_id: image.ad_id,
+                        image: image.image ? await getImageUrl(image.image) : null,
+                        createdAt: image.createdAt.toISOString(),
+                        updatedAt: image.updatedAt.toISOString()
+                    }
+                })),
             ad_location: {
                 id: ad.ad_location.id,
                 ad_id: ad.ad_location.ad_id,
@@ -308,7 +317,7 @@ exports.getAdDetails = async (req, res) => {
                 latitude: `${ad.ad_location.latitude}`,
                 createdAt: ad.ad_location.createdAt.toISOString(),
                 updatedAt: ad.ad_location.updatedAt.toISOString()
-            }, 
+            },
             user: {
                 id: ad.user.id,
                 user_id: ad.user.user_id,
@@ -317,20 +326,22 @@ exports.getAdDetails = async (req, res) => {
                 email: ad.user.email,
                 email_uid: ad.user.email_uid,
                 mobile_number: ad.user.mobile_number,
-                profile: ad.user.profile?await getImageUrl(ad.user.profile):null,
+                profile: ad.user.profile ? await getImageUrl(ad.user.profile) : null,
                 description: ad.user.description,
                 notification_token: ad.user.notification_token
             }
         };
         res.status(200).json(response);
     } catch (error) {
+        console.log(error);
+        
         res.status(500).json({ message: 'Server error' });
     }
 };
 
 exports.myAds = async (req, res) => {
     try {
-        const userId = req.user.id;    
+        const userId = req.user.id;
         const ads = await Ad.findAll({
             where: { user_id: userId, ad_stage: 3 },
             attributes: {
@@ -340,80 +351,80 @@ exports.myAds = async (req, res) => {
                 ]
             },
             include: [
-                {model: User,as:'user'},
-                {model: AdImage,as:'ad_images'},
-                {model: AdLocation,as:'ad_location'},
-                {model: AdPriceDetails,as:'ad_price_details'},
+                { model: User, as: 'user' },
+                { model: AdImage, as: 'ad_images' },
+                { model: AdLocation, as: 'ad_location' },
+                { model: AdPriceDetails, as: 'ad_price_details' },
             ],
             nest: true
-        });     
+        });
         const formattedAds = await Promise.all(
             ads.map(async (ad) => {
-            return {
-                "id": ad.dataValues.id,
-                "ad_id": ad.dataValues.ad_id,
-                "user_id": ad.dataValues.user_id,
-                "title": ad.dataValues.title,
-                "category": ad.dataValues.category,
-                "description": ad.dataValues.description,
-                "ad_type": ad.dataValues.ad_type,
-                "ad_status": ad.dataValues.ad_status,
-                "ad_stage": ad.dataValues.ad_stage,
-                "createdAt": ad.dataValues.createdAt.toISOString(),
-                "updatedAt": ad.dataValues.updatedAt.toISOString(),
-                "ad_wish_lists_count": ad.dataValues.ad_wish_lists_count,
-                "ad_views_count": ad.dataValues.ad_views_count,
-                "user": ad.dataValues.user ? {
-                    "id": ad.dataValues.user.id,
-                    "user_id": ad.dataValues.user.user_id,
-                    "is_guest": ad.dataValues.user.is_guest,
-                    "name": ad.dataValues.user.name,
-                    "email": ad.dataValues.user.email,
-                    "email_uid": ad.dataValues.user.email_uid,
-                    "mobile_number": ad.dataValues.user.mobile_number,
-                    "profile": ad.dataValues.user.profile?await getImageUrl(ad.dataValues.user.profile):null,
-                    "description": ad.dataValues.user.description,
-                    "notification_token": ad.dataValues.user.notification_token,
-                    "token": ad.dataValues.user.token,
-                    "createdAt": ad.dataValues.user.createdAt.toISOString(),
-                    "updatedAt": ad.dataValues.user.updatedAt.toISOString()
-                } : null,
-                "ad_images": ad.dataValues.ad_images ? await Promise.all(
-                    ad.dataValues.ad_images.map(async (image) => {
+                return {
+                    "id": ad.dataValues.id,
+                    "ad_id": ad.dataValues.ad_id,
+                    "user_id": ad.dataValues.user_id,
+                    "title": ad.dataValues.title,
+                    "category": ad.dataValues.category,
+                    "description": ad.dataValues.description,
+                    "ad_type": ad.dataValues.ad_type,
+                    "ad_status": ad.dataValues.ad_status,
+                    "ad_stage": ad.dataValues.ad_stage,
+                    "createdAt": ad.dataValues.createdAt.toISOString(),
+                    "updatedAt": ad.dataValues.updatedAt.toISOString(),
+                    "ad_wish_lists_count": ad.dataValues.ad_wish_lists_count,
+                    "ad_views_count": ad.dataValues.ad_views_count,
+                    "user": ad.dataValues.user ? {
+                        "id": ad.dataValues.user.id,
+                        "user_id": ad.dataValues.user.user_id,
+                        "is_guest": ad.dataValues.user.is_guest,
+                        "name": ad.dataValues.user.name,
+                        "email": ad.dataValues.user.email,
+                        "email_uid": ad.dataValues.user.email_uid,
+                        "mobile_number": ad.dataValues.user.mobile_number,
+                        "profile": ad.dataValues.user.profile ? await getImageUrl(ad.dataValues.user.profile) : null,
+                        "description": ad.dataValues.user.description,
+                        "notification_token": ad.dataValues.user.notification_token,
+                        "token": ad.dataValues.user.token,
+                        "createdAt": ad.dataValues.user.createdAt.toISOString(),
+                        "updatedAt": ad.dataValues.user.updatedAt.toISOString()
+                    } : null,
+                    "ad_images": ad.dataValues.ad_images ? await Promise.all(
+                        ad.dataValues.ad_images.map(async (image) => {
+                            return {
+                                "id": image.dataValues.id,
+                                "ad_id": image.dataValues.ad_id,
+                                "image": image.dataValues.image ? await getImageUrl(image.dataValues.image) : null,
+                                "createdAt": image.dataValues.createdAt.toISOString(),
+                                "updatedAt": image.dataValues.updatedAt.toISOString()
+                            };
+                        })
+                    ) : [],
+                    "ad_location": ad.dataValues.ad_location ? {
+                        "id": ad.dataValues.ad_location.id,
+                        "ad_id": ad.dataValues.ad_location.ad_id,
+                        "locality": ad.dataValues.ad_location.locality,
+                        "place": ad.dataValues.ad_location.place,
+                        "district": ad.dataValues.ad_location.district,
+                        "state": ad.dataValues.ad_location.state,
+                        "country": ad.dataValues.ad_location.country,
+                        "longitude": `${ad.dataValues.ad_location.longitude}`,
+                        "latitude": `${ad.dataValues.ad_location.latitude}`,
+                        "createdAt": ad.dataValues.ad_location.createdAt.toISOString(),
+                        "updatedAt": ad.dataValues.ad_location.updatedAt.toISOString()
+                    } : null,
+                    "ad_price_details": ad.dataValues.ad_price_details ? ad.dataValues.ad_price_details.map(priceDetail => {
                         return {
-                            "id": image.dataValues.id,
-                            "ad_id": image.dataValues.ad_id,
-                            "image": image.dataValues.image?await getImageUrl(image.dataValues.image):null,
-                            "createdAt": image.dataValues.createdAt.toISOString(),
-                            "updatedAt": image.dataValues.updatedAt.toISOString()
-                        };
-                    })
-                ): [],
-                "ad_location": ad.dataValues.ad_location ? {
-                    "id": ad.dataValues.ad_location.id,
-                    "ad_id": ad.dataValues.ad_location.ad_id,
-                    "locality": ad.dataValues.ad_location.locality,
-                    "place": ad.dataValues.ad_location.place,
-                    "district": ad.dataValues.ad_location.district,
-                    "state": ad.dataValues.ad_location.state,
-                    "country": ad.dataValues.ad_location.country,
-                    "longitude": `${ad.dataValues.ad_location.longitude}`,
-                    "latitude": `${ad.dataValues.ad_location.latitude}`,
-                    "createdAt": ad.dataValues.ad_location.createdAt.toISOString(),
-                    "updatedAt": ad.dataValues.ad_location.updatedAt.toISOString()
-                } : null,
-                "ad_price_details": ad.dataValues.ad_price_details ? ad.dataValues.ad_price_details.map(priceDetail => {
-                    return {
-                        "id": priceDetail.dataValues.id,
-                        "ad_id": priceDetail.dataValues.ad_id,
-                        "rent_duration": priceDetail.dataValues.rent_duration,
-                        "rent_price": priceDetail.dataValues.rent_price,
-                        "createdAt": priceDetail.dataValues.createdAt.toISOString(),
-                        "updatedAt": priceDetail.dataValues.updatedAt.toISOString()
-                    }
-                }) : []
-            };
-        }));
+                            "id": priceDetail.dataValues.id,
+                            "ad_id": priceDetail.dataValues.ad_id,
+                            "rent_duration": priceDetail.dataValues.rent_duration,
+                            "rent_price": priceDetail.dataValues.rent_price,
+                            "createdAt": priceDetail.dataValues.createdAt.toISOString(),
+                            "updatedAt": priceDetail.dataValues.updatedAt.toISOString()
+                        }
+                    }) : []
+                };
+            }));
         res.status(200).json(formattedAds);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
@@ -437,13 +448,13 @@ const insertAdViewCount = async (userId, adId) => {
         }
         return 'successfully updated';
     } catch (error) {
-        throw new Error('Error updating ad view count');
+        throw new Error('Error updating ad view count'+error);
     }
 };
 
 exports.getRecentUnsavedPost = async (req, res) => {
     try {
-        const userId = req.user.id;        
+        const userId = req.user.id;
         const ad = await Ad.findOne({
             where: {
                 user_id: userId,
@@ -452,58 +463,60 @@ exports.getRecentUnsavedPost = async (req, res) => {
                 }
             },
             include: [
-                { model: AdImage, as:'ad_images' },
-                { model: AdPriceDetails,as:'ad_price_details' },
-                { model: AdLocation, as:'ad_location' }
+                { model: AdImage, as: 'ad_images' },
+                { model: AdPriceDetails, as: 'ad_price_details' },
+                { model: AdLocation, as: 'ad_location' }
             ],
-            nest:true,
+            order: [['updatedAt', 'DESC']],
+            nest: true,
         });
-        if (!ad) {
-            return res.status(404).json({ message: 'Ad not found' });
+        let response = {}
+        if (ad) {
+            response = {
+                id: ad.ad_id,
+                ad_id: ad.ad_id,
+                user_id: ad.user_id,
+                title: ad.title,
+                category: ad.category,
+                description: ad.description,
+                ad_type: ad.ad_type,
+                ad_status: ad.ad_status,
+                ad_stage: ad.ad_stage,
+                createdAt: ad.createdAt.toISOString(),
+                updatedAt: ad.updatedAt.toISOString(),
+                ad_price_details: ad.ad_price_details ? ad.ad_price_details.map(priceDetail => ({
+                    id: priceDetail.id,
+                    ad_id: priceDetail.ad_id,
+                    rent_duration: priceDetail.rent_duration,
+                    rent_price: priceDetail.rent_price,
+                    createdAt: priceDetail.createdAt.toISOString(),
+                    updatedAt: priceDetail.updatedAt.toISOString()
+                })) : [],
+                ad_images: ad.ad_images ? await Promise.all(
+                    ad.ad_images.map(async (image) => {
+                        return {
+                            id: image.id,
+                            ad_id: image.ad_id,
+                            image: image.image ? await getImageUrl(image.image) : null,
+                            createdAt: image.createdAt.toISOString(),
+                            updatedAt: image.updatedAt.toISOString()
+                        }
+                    })) : [],
+                ad_location: ad.ad_location ? {
+                    id: ad.ad_location.id,
+                    ad_id: ad.ad_location.ad_id,
+                    locality: ad.ad_location.locality,
+                    place: ad.ad_location.place,
+                    district: ad.ad_location.district,
+                    state: ad.ad_location.state,
+                    country: ad.ad_location.country,
+                    longitude: `${ad.ad_location.longitude}`,
+                    latitude: `${ad.ad_location.latitude}`,
+                    createdAt: ad.ad_location.createdAt.toISOString(),
+                    updatedAt: ad.ad_location.updatedAt.toISOString()
+                } : null
+            };
         }
-        const response = {
-            id: ad.ad_id,
-            ad_id: ad.ad_id,
-            user_id: ad.user_id,
-            title: ad.title,
-            category: ad.category,
-            description: ad.description,
-            ad_type: ad.ad_type,
-            ad_status: ad.ad_status,
-            ad_stage: ad.ad_stage,
-            createdAt: ad.createdAt.toISOString(),
-            updatedAt: ad.updatedAt.toISOString(),
-            ad_price_details: ad.ad_price_details?ad.ad_price_details.map(priceDetail => ({
-                id: priceDetail.id,
-                ad_id: priceDetail.ad_id,
-                rent_duration: priceDetail.rent_duration,
-                rent_price: priceDetail.rent_price,
-                createdAt: priceDetail.createdAt.toISOString(),
-                updatedAt: priceDetail.updatedAt.toISOString()
-            })):[],
-            ad_images: ad.ad_images?await Promise.all(
-                ad.ad_images.map(async (image) => {
-                return{
-                    id: image.id,
-                    ad_id: image.ad_id,
-                    image: image.image?await getImageUrl(image.image):null,
-                    createdAt: image.createdAt.toISOString(),
-                    updatedAt: image.updatedAt.toISOString()
-                }})):[],
-            ad_location:ad.ad_location? {
-                id: ad.ad_location.id,
-                ad_id: ad.ad_location.ad_id,
-                locality: ad.ad_location.locality,
-                place: ad.ad_location.place,
-                district: ad.ad_location.district,
-                state: ad.ad_location.state,
-                country: ad.ad_location.country,
-                longitude: `${ad.ad_location.longitude}`,
-                latitude: `${ad.ad_location.latitude}`,
-                createdAt: ad.ad_location.createdAt.toISOString(),
-                updatedAt: ad.ad_location.updatedAt.toISOString()
-            }:null
-        };
         res.status(200).json(response);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
@@ -517,7 +530,7 @@ exports.searchCategories = async (req, res) => {
             return res.status(400).json({ message: 'Invalid request' });
         }
         const datas = await SearchCategory.findAll(
-                {
+            {
                 where: {
                     keyword: { [Op.like]: `%${keyword}%` },
                     ad_type
@@ -532,25 +545,29 @@ exports.searchCategories = async (req, res) => {
 };
 
 exports.recommentedPosts = async (req, res) => {
+    console.log('Called', req.body.id);
+
     try {
         const page = req.body.page;
         const perPage = 16;
         const offset = (page - 1) * perPage;
-
-        const userSearches = await UserSearch.findAll({
-            where: {
-                user_id: req.user.id
-            },
-            order: [['createdAt', 'ASC']],
-            limit: 2,
-            raw: true,
-            nest: true
-        });
+        let userSearches = [];
+        if(req.body.id){
+            userSearches = await UserSearch.findAll({
+                where: {
+                    user_id: req.body.id
+                },
+                order: [['createdAt', 'ASC']],
+                limit: 2,
+                raw: true,
+                nest: true
+            });
+        }
         let adsQuery = {
-            where: { 
+            where: {
                 ad_status: 'online',
-                user_id: { [Op.ne]: req.user.id },
-                ad_type:"rent"
+                ad_type: "rent",
+                ad_stage: 3
             },
             include: [
                 { model: User, as: 'user' },
@@ -561,61 +578,74 @@ exports.recommentedPosts = async (req, res) => {
             limit: perPage,
             offset: offset,
         };
+        if (req.body.id) {
+            adsQuery.where.user_id = { [Op.ne]: req.body.id };
+        }
         if (userSearches.length !== 0) {
-            if (userSearches[0].location_type === 'locality' || userSearches[0].location_type === 'place') {
+            const firstSearch = userSearches[0];
+            const hasLocationDetails = firstSearch.location && firstSearch.location_type && firstSearch.latitude !== null && firstSearch.longitude !== null;
+            if (hasLocationDetails) {
+                if (userSearches[0].location_type === 'locality' || userSearches[0].location_type === 'place') {
+                    adsQuery.include.push({
+                        model: AdLocation,
+                        as: 'ad_location',
+                        where: {
+                            [Op.or]: [
+                                { locality: userSearches[0].location },
+                                { place: userSearches[0].location }
+                            ]
+                        }
+                    });
+                } else {
+                    adsQuery.include.push({
+                        model: AdLocation,
+                        as: 'ad_location',
+                        where: {
+                            [Op.or]: [
+                                { state: userSearches[0].location },
+                                { country: userSearches[0].location }
+                            ]
+                        }
+                    });
+                }
+                adsQuery.attributes = {
+                    include: [
+                        [
+                            literal(`(
+                                SELECT (6371 * 
+                                    acos(cos(radians(${userSearches[0].latitude})) * cos(radians(ad_location.latitude)) * 
+                                    cos(radians(ad_location.longitude) - radians(${userSearches[0].longitude})) + 
+                                    sin(radians(${userSearches[0].latitude})) * sin(radians(ad_location.latitude)))
+                                ) AS distance
+                            )`), 'distance'
+                        ],
+                    ]
+                };
+                adsQuery.order = [
+                    [sequelize.literal('distance'), 'ASC']
+                ];
+            } else {
                 adsQuery.include.push({
                     model: AdLocation,
-                    as: 'ad_location',
-                    where: {
-                        [Op.or]: [
-                            { locality: userSearches[0].location },
-                            { place: userSearches[0].location }
-                        ]
-                    }
-                });
-            }else{
-                adsQuery.include.push({
-                    model: AdLocation,
-                    as: 'ad_location',
-                    where: {
-                        [Op.or]: [
-                            { state: userSearches[0].location },
-                            { country: userSearches[0].location }
-                        ]
-                    }
-                });
+                    as: "ad_location"
+                })
             }
-            adsQuery.attributes={
-                include:[
-                    [
-                        literal(`(
-                            SELECT (6371 * 
-                                acos(cos(radians(${userSearches[0].latitude})) * cos(radians(ad_location.latitude)) * 
-                                cos(radians(ad_location.longitude) - radians(${userSearches[0].longitude})) + 
-                                sin(radians(${userSearches[0].latitude})) * sin(radians(ad_location.latitude)))
-                            ) AS distance
-                        )`), 'distance'
-                    ],
-                ]
-            };
-            adsQuery.order = [
-                [sequelize.literal('distance'), 'ASC']
-            ];
-        }else{
+        } else {
             adsQuery.include.push({
                 model: AdLocation,
                 as: "ad_location"
             })
         }
         const { count, rows: ads } = await Ad.findAndCountAll(adsQuery);
-        const totalPages = Math.ceil(count / perPage);      
+
+        const totalPages = Math.ceil(count / perPage);
         const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl.split('?')[0]}`;
         const buildUrl = (pageNum) => `${fullUrl}?page=${pageNum}`;
         const response = {
             current_page: page,
             data: await Promise.all(
                 ads.map(async (ad) => {
-                    return{
+                    return {
                         id: ad.dataValues.ad_id,
                         ad_id: ad.dataValues.ad_id,
                         user_id: ad.dataValues.user_id,
@@ -625,7 +655,7 @@ exports.recommentedPosts = async (req, res) => {
                         ad_type: ad.dataValues.ad_type,
                         ad_status: ad.dataValues.ad_status,
                         ad_stage: ad.dataValues.ad_stage,
-                        distance: ad.dataValues.distance?ad.dataValues.distance:null,
+                        distance: ad.dataValues.distance ? ad.dataValues.distance : null,
                         createdAt: ad.dataValues.createdAt.toISOString(),
                         updatedAt: ad.dataValues.updatedAt.toISOString(),
                         ad_price_details: ad.dataValues.ad_price_details.map(priceDetail => ({
@@ -638,13 +668,14 @@ exports.recommentedPosts = async (req, res) => {
                         })),
                         ad_images: await Promise.all(
                             ad.dataValues.ad_images.map(async (image) => {
-                            return{
-                                id: image.dataValues.id,
-                                ad_id: image.dataValues.ad_id,
-                                image: image.dataValues.image?await getImageUrl(image.image):null,
-                                createdAt: image.dataValues.createdAt.toISOString(),
-                                updatedAt: image.dataValues.updatedAt.toISOString()
-                            }})),
+                                return {
+                                    id: image.dataValues.id,
+                                    ad_id: image.dataValues.ad_id,
+                                    image: image.dataValues.image ? await getImageUrl(image.image) : null,
+                                    createdAt: image.dataValues.createdAt.toISOString(),
+                                    updatedAt: image.dataValues.updatedAt.toISOString()
+                                }
+                            })),
                         ad_location: {
                             id: ad.dataValues.ad_location.id,
                             ad_id: ad.dataValues.ad_location.ad_id,
@@ -660,9 +691,9 @@ exports.recommentedPosts = async (req, res) => {
                         },
                     }
                 }
-            )),
+                )),
             first_page_url: buildUrl(1),
-            from: offset+1,
+            from: offset + 1,
             last_page: totalPages,
             last_page_url: buildUrl(totalPages),
             links: links = [
@@ -692,61 +723,109 @@ exports.recommentedPosts = async (req, res) => {
         res.status(200).json(response);
     } catch (error) {
         console.log(error);
+
         res.status(500).json({ message: 'Server error' });
     }
 };
 
-exports.rentCategoryPosts = async (req, res) => {
+exports.getAllPosts = async (req, res) => {
+    let posts = await Ad.findAll(
+        {
+            where: {
+                ad_status: 'online',
+                ad_type: "rent",
+                ad_stage: 3
+            },
+            include: [
+                { model: User, as: 'user' },
+                { model: AdImage, as: 'ad_images' },
+                { model: AdPriceDetails, as: 'ad_price_details' },
+            ]
+        }
+    );
+    res.status(200).json(posts);
+}
+exports.rentCategoryPosts = async (req, res) => {    
     try {
-        const { ad_type, location_type, location, latitude, longitude, category, keyword, page = 1 } = req.body;
-        if (!ad_type || !location_type || !location || !latitude || !longitude) {
+        const { ad_type, location_type, location, latitude, longitude, category, keyword, page = 1, user_id } = req.body;
+        if (!ad_type) {
             return res.status(400).json({ message: 'Invalid request' });
         }
         const perPage = 15;
-        const offset=(page - 1) * perPage;
-        await UserSearch.create({
-            user_id: req.user.id,
-            keyword: req.body.keyword || '',
-            category: req.body.category || '',
-            ad_type: req.body.ad_type,
-            location_type: req.body.location_type || '',
-            location: req.body.location || '',
-            latitude: req.body.latitude || null,
-            longitude: req.body.longitude || null,
-        })
+        const offset = (page - 1) * perPage;
+        if(user_id){
+            await UserSearch.create({
+                user_id: user_id,
+                keyword: req.body.keyword || '',
+                category: req.body.category || '',
+                ad_type: req.body.ad_type,
+                location_type: req.body.location_type || '',
+                location: req.body.location || '',
+                latitude: req.body.latitude || null,
+                longitude: req.body.longitude || null,
+            })
+        }
         let response;
         let adsQuery;
-        const allAds = await Ad.findAll({attributes: ['ad_id']});
+        const allAds = await Ad.findAll({ attributes: ['ad_id'] });
         const allAdIds = allAds.map(ad => ad.ad_id);
-        const AdIds=[
-            1726693956984577,
-            1726761527100320
-        ]
-        console.log(allAdIds);
-        
-        if(keyword&&allAdIds.includes(Number(keyword))){
+        if (keyword && allAdIds.includes(Number(keyword))) {
+            console.log('1111');
+            
             adsQuery = {
                 where: {
-                    ad_id:Number(keyword)
+                    ad_id: Number(keyword),
+                    ad_stage: 3
                 },
                 include: [
-                    {model: User,as:'user'},
-                    {model: AdImage,as:'ad_images'},
-                    {model: AdPriceDetails,as:'ad_price_details'},
-                    {model: AdLocation, as:'ad_location'}
+                    { model: User, as: 'user' },
+                    { model: AdImage, as: 'ad_images' },
+                    { model: AdPriceDetails, as: 'ad_price_details' },
+                    { model: AdLocation, as: 'ad_location' }
                 ],
                 distinct: true,
                 limit: perPage,
                 offset: offset,
             };
-        }else{
+        } else if (!location_type || !location || !latitude || !longitude) {
+            console.log('2222');
+            
             adsQuery = {
                 where: {
                     ad_type: ad_type,
                     ad_status: 'online',
+                    ad_stage: 3
                 },
-                attributes:{
-                    include:[
+                include: [
+                    { model: User, as: 'user' },
+                    { model: AdImage, as: 'ad_images' },
+                    { model: AdPriceDetails, as: 'ad_price_details' },
+                    { model: AdLocation, as: 'ad_location' }
+                ],
+                distinct: true,
+                limit: perPage,
+                offset: offset,
+            };
+            if (category) adsQuery.where.category = category;
+            if (keyword) {
+                console.log('keyword');
+                
+                adsQuery.where[Op.or] = [
+                    { category: { [Op.like]: `%${keyword}%` } },
+                    { title: { [Op.like]: `%${keyword}%` } },
+                    { description: { [Op.like]: `%${keyword}%` } },
+                ];
+            }
+        } else {
+            console.log('3333');
+            adsQuery = {
+                where: {
+                    ad_type: ad_type,
+                    ad_status: 'online',
+                    ad_stage: 3
+                },
+                attributes: {
+                    include: [
                         [
                             literal(`(
                                 SELECT (6371 * 
@@ -759,9 +838,9 @@ exports.rentCategoryPosts = async (req, res) => {
                     ]
                 },
                 include: [
-                    {model: User,as:'user'},
-                    {model: AdImage,as:'ad_images'},
-                    {model: AdPriceDetails,as:'ad_price_details'},
+                    { model: User, as: 'user' },
+                    { model: AdImage, as: 'ad_images' },
+                    { model: AdPriceDetails, as: 'ad_price_details' },
                 ],
                 order: [
                     [sequelize.literal('distance'), 'ASC']
@@ -771,13 +850,16 @@ exports.rentCategoryPosts = async (req, res) => {
                 offset: offset,
             };
             if (category) adsQuery.where.category = category;
-            if (keyword) {
-                adsQuery.where[Op.or] = [
-                    { category: { [Op.like]: `%${keyword}%` } },
-                    { title: { [Op.like]: `%${keyword}%` } },
-                    { description: { [Op.like]: `%${keyword}%` } },
-                ];
-            }     
+            if (keyword) {                
+                adsQuery.where = {
+                    ...adsQuery.where,
+                    [Op.or]: [
+                        { category: { [Op.like]: `%${keyword}%` } },
+                        { title: { [Op.like]: `%${keyword}%` } },
+                        { description: { [Op.like]: `%${keyword}%` } },
+                    ]
+                };
+            }
             if (location_type === 'locality' || location_type === 'place') {
                 adsQuery.include.push({
                     model: AdLocation,
@@ -802,29 +884,35 @@ exports.rentCategoryPosts = async (req, res) => {
                 });
             }
         }
-        
+
+        console.log(adsQuery);
+
         const { count, rows: ads } = await Ad.findAndCountAll(adsQuery);
-        const userId = req.user.id;
-        const wishLists = await AdWishLists.findAll({
-            where: { user_id: userId },
-            attributes: ['ad_id']
-        });
-        const wishListAdIds = wishLists.map(wishList => wishList.ad_id);        
-        ads.map(ad => {
-            ad.wishListed = wishListAdIds.includes(ad.ad_id);
-            if (ad.user) {
-                ad.user = ad.user.toJSON();
-                delete ad.user.token;
-            }
-        });
-        const totalPages = Math.ceil(count / perPage);      
+        
+        const userId = user_id;
+        let wishListAdIds;
+        if(userId){
+            const wishLists = await AdWishLists.findAll({
+                where: { user_id: userId },
+                attributes: ['ad_id']
+            });
+            wishListAdIds = wishLists.map(wishList => wishList.ad_id);
+            ads.map(ad => {
+                ad.wishListed = wishListAdIds.includes(ad.ad_id);
+                if (ad.user) {
+                    ad.user = ad.user.toJSON();
+                    delete ad.user.token;
+                }
+            });
+        }
+        const totalPages = Math.ceil(count / perPage);
         const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl.split('?')[0]}`;
         const buildUrl = (pageNum) => `${fullUrl}?page=${pageNum}`;
         response = {
             current_page: page,
             data: await Promise.all(
                 ads.map(async (ad) => {
-                    return{
+                    return {
                         id: ad.dataValues.ad_id,
                         ad_id: ad.dataValues.ad_id,
                         user_id: ad.dataValues.user_id,
@@ -834,10 +922,10 @@ exports.rentCategoryPosts = async (req, res) => {
                         ad_type: ad.dataValues.ad_type,
                         ad_status: ad.dataValues.ad_status,
                         ad_stage: ad.dataValues.ad_stage,
-                        distance: ad.dataValues.distance?ad.dataValues.distance:null,
+                        distance: ad.dataValues.distance ? ad.dataValues.distance : null,
                         createdAt: ad.dataValues.createdAt.toISOString(),
                         updatedAt: ad.dataValues.updatedAt.toISOString(),
-                        wishListed: wishListAdIds.includes(ad.dataValues.ad_id),
+                        wishListed: userId?wishListAdIds.includes(ad.dataValues.ad_id):false,
                         ad_price_details: ad.dataValues.ad_price_details.map(priceDetail => ({
                             id: priceDetail.dataValues.id,
                             ad_id: priceDetail.dataValues.ad_id,
@@ -848,13 +936,14 @@ exports.rentCategoryPosts = async (req, res) => {
                         })),
                         ad_images: await Promise.all(
                             ad.dataValues.ad_images.map(async (image) => {
-                            return{
-                                id: image.dataValues.id,
-                                ad_id: image.dataValues.ad_id,
-                                image: image.dataValues.image?await getImageUrl(image.image):null,
-                                createdAt: image.dataValues.createdAt.toISOString(),
-                                updatedAt: image.dataValues.updatedAt.toISOString()
-                            }})),
+                                return {
+                                    id: image.dataValues.id,
+                                    ad_id: image.dataValues.ad_id,
+                                    image: image.dataValues.image ? await getImageUrl(image.image) : null,
+                                    createdAt: image.dataValues.createdAt.toISOString(),
+                                    updatedAt: image.dataValues.updatedAt.toISOString()
+                                }
+                            })),
                         ad_location: {
                             id: ad.dataValues.ad_location.id,
                             ad_id: ad.dataValues.ad_location.ad_id,
@@ -870,9 +959,9 @@ exports.rentCategoryPosts = async (req, res) => {
                         },
                     }
                 }
-            )),
+                )),
             first_page_url: buildUrl(1),
-            from: offset+1,
+            from: offset + 1,
             last_page: totalPages,
             last_page_url: buildUrl(totalPages),
             links: links = [
@@ -901,6 +990,8 @@ exports.rentCategoryPosts = async (req, res) => {
         }
         res.status(200).json(response);
     } catch (error) {
+        console.log(error);
+
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -908,79 +999,119 @@ exports.rentCategoryPosts = async (req, res) => {
 exports.bestServiceProviders = async (req, res) => {
     try {
         const perPage = 10;
-        const { location_type, location, latitude, longitude, page = 1 } = req.body;
-        const offset=(page - 1) * perPage;
-        if (!location_type || !location || !latitude || !longitude) {
-            return res.status(400).json({ message: 'Invalid request' });
-        }
-        let adsQuery = {
-            where: {
-                ad_type: 'service',
-                ad_status: 'online',
-                user_id:{ [Op.ne]: req.user.id }
-            },
-            attributes: {
+        const { location_type, location, latitude, longitude, page = 1, user_id } = req.body;
+        console.log(user_id);
+        
+        const offset = (page - 1) * perPage;
+        const hasLocation = location_type && location && latitude && longitude;
+        let adsQuery;
+        if (hasLocation) {
+            adsQuery = {
+                where: {
+                    ad_type: 'service',
+                    ad_status: 'online',
+                    user_id: { [Op.ne]: user_id },
+                    ad_stage: 3
+                },
+                attributes: {
+                    include: [
+                        [literal(`(SELECT COUNT(*) FROM ad_wish_lists WHERE ad_wish_lists.ad_id = Ad.ad_id)`), 'ad_wish_lists_count'],
+                        [literal(`(SELECT COUNT(*) FROM ad_views WHERE ad_views.ad_id = Ad.ad_id)`), 'ad_views_count'],
+                        [
+                            literal(`(
+                                SELECT (6371 * 
+                                    acos(cos(radians(${latitude})) * cos(radians(ad_location.latitude)) * 
+                                    cos(radians(ad_location.longitude) - radians(${longitude})) + 
+                                    sin(radians(${latitude})) * sin(radians(ad_location.latitude)))
+                                ) AS distance
+                            )`), 'distance'
+                        ],
+                    ]
+                },
                 include: [
-                    [literal(`(SELECT COUNT(*) FROM ad_wish_lists WHERE ad_wish_lists.ad_id = Ad.ad_id)`), 'ad_wish_lists_count'],
-                    [literal(`(SELECT COUNT(*) FROM ad_views WHERE ad_views.ad_id = Ad.ad_id)`), 'ad_views_count'],
-                    // [literal(`ST_Distance_Sphere(POINT(${longitude}, ${latitude}), POINT(ad_location.longitude, ad_location.latitude))`), 'distance'],
-                    [
-                        literal(`(
-                            SELECT (6371 * 
-                                acos(cos(radians(${latitude})) * cos(radians(ad_location.latitude)) * 
-                                cos(radians(ad_location.longitude) - radians(${longitude})) + 
-                                sin(radians(${latitude})) * sin(radians(ad_location.latitude)))
-                            ) AS distance
-                        )`), 'distance'
-                    ],
-                ]
-            },
-            include: [
-                {model: User,as:'user'},
-                {model: AdImage,as:'ad_images'},
-                {model: AdPriceDetails,as:'ad_price_details'},
-            ],
-            order: [
-                [sequelize.literal('ad_wish_lists_count'), 'ASC'],
-                [sequelize.literal('ad_views_count'), 'ASC'],
-                [sequelize.literal('distance'), 'ASC'],
-            ],
-            distinct: true,
-            limit: perPage,
-            offset: offset,
-        }; 
-        if (location_type === 'locality' || location_type === 'place') {
-            adsQuery.include.push({
-                model: AdLocation,
-                as: 'ad_location',
-                where: {
-                    [Op.or]: [
-                        { locality: location },
-                        { place: location }
-                    ]
-                }
-            });
+                    { model: User, as: 'user' },
+                    { model: AdImage, as: 'ad_images' },
+                    { model: AdPriceDetails, as: 'ad_price_details' },
+                ],
+                order: [
+                    [sequelize.literal('ad_wish_lists_count'), 'ASC'],
+                    [sequelize.literal('ad_views_count'), 'ASC'],
+                    [sequelize.literal('distance'), 'ASC'],
+                ],
+                distinct: true,
+                limit: perPage,
+                offset: offset,
+            };
+            if (user_id) {
+                adsQuery.where.user_id = { [Op.ne]: user_id };
+            }
+            if (location_type === 'locality' || location_type === 'place') {
+                adsQuery.include.push({
+                    model: AdLocation,
+                    as: 'ad_location',
+                    where: {
+                        [Op.or]: [
+                            { locality: location },
+                            { place: location }
+                        ]
+                    }
+                });
+            } else {
+                adsQuery.include.push({
+                    model: AdLocation,
+                    as: 'ad_location',
+                    where: {
+                        [Op.or]: [
+                            { state: location },
+                            { country: location }
+                        ]
+                    }
+                });
+            }
         } else {
-            adsQuery.include.push({
-                model: AdLocation,
-                as: 'ad_location',
+            adsQuery = {
                 where: {
-                    [Op.or]: [
-                        { state: location },
-                        { country: location }
+                    ad_type: 'service',
+                    ad_status: 'online',
+                    ad_stage: 3
+                },
+                attributes: {
+                    include: [
+                        [literal(`(SELECT COUNT(*) FROM ad_wish_lists WHERE ad_wish_lists.ad_id = Ad.ad_id)`), 'ad_wish_lists_count'],
+                        [literal(`(SELECT COUNT(*) FROM ad_views WHERE ad_views.ad_id = Ad.ad_id)`), 'ad_views_count'],
                     ]
-                }
-            });
-        }  
+                },
+                include: [
+                    { model: User, as: 'user' },
+                    { model: AdImage, as: 'ad_images' },
+                    { model: AdPriceDetails, as: 'ad_price_details' },
+                    {
+                        model: AdLocation,
+                        as: 'ad_location'
+                    }
+                ],
+                order: [
+                    [sequelize.literal('ad_wish_lists_count'), 'DESC'],
+                    [sequelize.literal('ad_views_count'), 'DESC'],
+                ],
+                distinct: true,
+                limit: perPage,
+                offset: offset,
+            };
+            if (user_id) {
+                adsQuery.where.user_id = { [Op.ne]: user_id };
+            }
+        }
+
         const { count, rows: ads } = await Ad.findAndCountAll(adsQuery);
-        const totalPages = Math.ceil(count / perPage);      
+        const totalPages = Math.ceil(count / perPage);
         const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl.split('?')[0]}`;
         const buildUrl = (pageNum) => `${fullUrl}?page=${pageNum}`;
         const response = {
             current_page: page,
             data: await Promise.all(
                 ads.map(async (ad) => {
-                    return{
+                    return {
                         id: ad.dataValues.ad_id,
                         ad_id: ad.dataValues.ad_id,
                         user_id: ad.dataValues.user_id,
@@ -992,7 +1123,7 @@ exports.bestServiceProviders = async (req, res) => {
                         ad_stage: ad.dataValues.ad_stage,
                         ad_wish_lists_count: ad.dataValues.ad_wish_lists_count,
                         ad_views_count: ad.dataValues.ad_views_count,
-                        distance:ad.dataValues.distance,
+                        distance: ad.dataValues.distance,
                         createdAt: ad.dataValues.createdAt.toISOString(),
                         updatedAt: ad.dataValues.updatedAt.toISOString(),
                         ad_price_details: ad.dataValues.ad_price_details.map(priceDetail => ({
@@ -1005,13 +1136,14 @@ exports.bestServiceProviders = async (req, res) => {
                         })),
                         ad_images: await Promise.all(
                             ad.dataValues.ad_images.map(async (image) => {
-                            return{
-                                id: image.dataValues.id,
-                                ad_id: image.dataValues.ad_id,
-                                image: image.dataValues.image?await getImageUrl(image.image):null,
-                                createdAt: image.dataValues.createdAt.toISOString(),
-                                updatedAt: image.dataValues.updatedAt.toISOString()
-                            }})),
+                                return {
+                                    id: image.dataValues.id,
+                                    ad_id: image.dataValues.ad_id,
+                                    image: image.dataValues.image ? await getImageUrl(image.image) : null,
+                                    createdAt: image.dataValues.createdAt.toISOString(),
+                                    updatedAt: image.dataValues.updatedAt.toISOString()
+                                }
+                            })),
                         ad_location: {
                             id: ad.dataValues.ad_location.id,
                             ad_id: ad.dataValues.ad_location.ad_id,
@@ -1027,9 +1159,9 @@ exports.bestServiceProviders = async (req, res) => {
                         },
                     }
                 }
-            )),
+                )),
             first_page_url: buildUrl(1),
-            from: offset+1,
+            from: offset + 1,
             last_page: totalPages,
             last_page_url: buildUrl(totalPages),
             links: links = [
@@ -1058,15 +1190,13 @@ exports.bestServiceProviders = async (req, res) => {
         }
         res.status(200).json(response);
     } catch (error) {
-        ;
-        
         res.status(500).json({ message: 'Server error' });
     }
 };
 
 exports.adCategoriesFor = async (req, res) => {
     try {
-        const adCategoriesArray=[]
+        const adCategoriesArray = []
         res.status(200).json(adCategoriesArray);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
@@ -1107,7 +1237,7 @@ exports.changeOnlineStatus = async (req, res) => {
         if (!ad_id) {
             return res.status(400).json({ message: 'Invalid request' });
         }
-        const ad = await Ad.findOne({where:{ad_id}});
+        const ad = await Ad.findOne({ where: { ad_id } });
         if (!ad) {
             return res.status(404).json({ message: 'Ad not found' });
         }

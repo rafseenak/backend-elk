@@ -8,7 +8,6 @@ const path = require('path');
 const { PutObjectCommand, S3Client, GetObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { validationResult } = require('express-validator');
-const { profile } = require('console');
 require('dotenv').config();
 const AdView = require('../models/adViewModel');
 const AdImage = require('../models/adImageModel');
@@ -44,12 +43,8 @@ const s3 = new S3Client({
 const sendCurl = async (url) => {
     try {
         const response = await axios.get(url);
-        console.log(response.data);
-        
         return response.data;
     } catch (error) {
-        console.log(error);
-        
         return null;
     }
 };
@@ -61,30 +56,21 @@ async function getImageUrl(imageKey) {
     });
     const url = `https://${process.env.BUCKET_NAME}.s3.${process.env.BUCKET_REGION}.amazonaws.com/${imageKey}`;
     const signedUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
-    console.log(signedUrl);
     return signedUrl;
 }
 const generateRandomString = () => Math.random().toString(36).substring(2, 15);
 
 const sendSangamamOtp = async (mobile, otp) => {
-    const username = encodeURIComponent(process.env.SMS_UNAME);
-    const password = encodeURIComponent(process.env.SMS_PASSWORD);
-    const sender = "SGMOLN";
     const messageContent = `Your OTP for ELK is: ${otp}. Do not share this OTP with anyone.`;
     const message = encodeURIComponent(messageContent);
     const expire = Math.floor(Date.now() / 1000) + 120;
     const timeKey = crypto.createHash("md5").update('send-sms' + "sms@rits-v1.0" + expire).digest("hex");
     const timeAccessTokenKey = crypto.createHash("md5").update(process.env.SMS_ACCESS_TOKEN + timeKey).digest("hex");
     const signature = crypto.createHash("md5").update(timeAccessTokenKey + process.env.SMS_ACCESS_TOKEN_KEY).digest("hex");
-    console.log("Signature:", signature);
-    // const route = "T";
     const route = 'transactional';
     const authSignature = signature;
     const smsHeader = 'SGMOLN';
     const countryCode = '+91';
-    const templateId = '';
-    const entityId = '';
-    // const url = `https://fastsms.sangamamonline.in/sendsms?uname=${username}&pwd=${password}&senderid=${sender}&to=${mobile}&msg=${message}&route=${route}`;
     const url = `https://fastsms.sangamamonline.in/api/sms/v1.0/send-sms?accessToken=${process.env.SMS_ACCESS_TOKEN}&expire=${expire}&authSignature=${authSignature}&route=${route}&smsHeader=${smsHeader}&messageContent=${message}&recipients=${mobile}&contentType=text&removeDuplicateNumbers=1&countryCode=${countryCode}`;
     return await sendCurl(url);
 };
@@ -152,6 +138,7 @@ exports.createUser = async (req, res) => {
                         email:user.email,
                         is_guest:user.is_guest,
                         description:user.description,
+                        is_admin: user.is_admin
                     }
                 });
             } else {
@@ -178,11 +165,13 @@ exports.createUser = async (req, res) => {
                         email:user.email,
                         is_guest:user.is_guest,
                         description:user.description,
+                        is_admin: user.is_admin
                     }
                 });
             }
         }
     } catch (error) {
+        console.log(error);
         return res.status(500).json({ message: 'Internal Server error', error });
     }
 };
@@ -355,9 +344,7 @@ exports.updateProfilePic = async (req, res) => {
         });
         profileUrl = await getSignedUrl(s3, command2, { expiresIn: 604800 });
         res.status(200).json({success: true, data: profileUrl});
-        // res.status(200).json({success: true, data: 'https://rafsi-test.s3.eu-north-1.amazonaws.com/1729532649189110.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAZI2LDFYT5X2HDAMA%2F20241022%2Feu-north-1%2Fs3%2Faws4_request&X-Amz-Date=20241022T172923Z&X-Amz-Expires=604800&X-Amz-Signature=dfbe8be8d82e1cd8bccfdf8e76ee47a5825d521bebe30e3f79929fa6b16e2028&X-Amz-SignedHeaders=host&x-id=GetObject'});
     }catch(e){
-        console.error(e)
         res.status(500).json({ success: false, message: e.message });
     }
 };
@@ -462,7 +449,6 @@ exports.deleteAccount = async (req, res) => {
         }
         return res.status(200).json({ success: true, message: 'Account deleted successfully' });
     } catch (error) {
-        console.error('Error deleting account:', error);
         return res.status(500).json({ success: false, message: 'An error occurred while deleting the account' });
     }
 };
@@ -566,7 +552,7 @@ exports.userWithAds = async (req, res) => {
         }
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
-        }console.log(response.ads[0].ad_images);
+        }
         
         return res.status(200).json(response);
     } catch (error) {

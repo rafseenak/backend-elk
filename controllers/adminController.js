@@ -99,6 +99,49 @@ const getAdminAds = async (req, res) => {
     }
 };
 
+const getAllUsers = async (req, res) => {
+    try {
+        const users = await User.findAll({
+            where: {
+                is_guest : false
+            }
+        });
+        const usersWithProfileUrls = await Promise.all(users.map(async (user) => {
+            const userObj = user.toJSON();
+            if (userObj.profile) {
+                userObj.profile = await getImageUrl(userObj.profile);
+            }
+            return userObj;
+        }));
+        return res.status(200).json({ success: true, users: usersWithProfileUrls });
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        return res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    }
+};
+
+const blockUserById = async (req, res) => {
+    try {
+        const { id } = req.query;
+        const user = await User.findOne({
+            where: {
+                user_id : id
+            }
+        });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        user.block_status = !user.block_status;
+        await user.save();
+
+        return res.status(200).json({ success: true, message: 'User blocked successfully' });
+    } catch (error) {
+        console.error('Error blocking user:', error);
+        return res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    }
+};
+
 const deleteAdminAd = async (req, res) => {
     try {
         const { id } = req.query;
@@ -147,4 +190,4 @@ const getAllAdLocations = async (req, res) => {
 };
 
 
-module.exports = { getAdminAds, deleteAdminAd, getAllAdLocations };
+module.exports = { getAdminAds, deleteAdminAd, getAllAdLocations, getAllUsers, blockUserById };

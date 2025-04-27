@@ -60,24 +60,24 @@ router.get('/check-phone', async (req, res) => {
   }
 });
 //place
-router.post('/get_place', authenticateToken, body('longitude').isNumeric(), body('latitude').isNumeric(), placeController.getPlace);
-router.post('/place_search', authenticateToken, placeController.placeSearch);
-router.post('/get_places', authenticateToken, body('type').isIn(['state', 'city', 'locality']), body('state').optional().notEmpty(), body('city').optional().notEmpty(), placeController.getPlaces);
+router.post('/get_place', body('longitude').isNumeric(), body('latitude').isNumeric(), placeController.getPlace);
+router.post('/place_search', placeController.placeSearch);
+router.post('/get_places', body('type').isIn(['state', 'city', 'locality']), body('state').optional().notEmpty(), body('city').optional().notEmpty(), placeController.getPlaces);
 
 //post
 router.post('/create_post',authenticateToken,postController.createAd);
 router.post('/upload_ad_image',authenticateToken, upload.array('files'),postController.updateAdImage);
 router.post('/update_ad_address',authenticateToken,postController.updateAdAddress);
 router.get('/my_ads',authenticateToken,postController.myAds);
-router.post('/get_ad_details',authenticateToken,postController.getAdDetails);
+router.post('/get_ad_details',postController.getAdDetails);
 router.post('/delete_ad_image',authenticateToken,postController.deletAdImage);
 router.post('/delete_ad',authenticateToken,postController.deleteAd);
 router.get('/get_recent_unsaved_ad',authenticateToken,postController.getRecentUnsavedPost);
 router.post('/change_online_status',authenticateToken,postController.changeOnlineStatus);
-router.post('/recomented_posts',authenticateToken,postController.recommentedPosts);
-router.post('/rent_category_posts',authenticateToken,postController.rentCategoryPosts);
-router.post('/categories_search',authenticateToken,postController.searchCategories);
-router.post('/best_service_providers',authenticateToken,postController.bestServiceProviders);
+router.post('/recomented_posts',postController.recommentedPosts);
+router.post('/rent_category_posts',postController.rentCategoryPosts);
+router.post('/categories_search',postController.searchCategories);
+router.post('/best_service_providers',postController.bestServiceProviders);
 
 //chat
 router.post('/add_chat',authenticateToken,chatController.addChat);
@@ -121,6 +121,8 @@ router.get('/get-all-users', async (req, res) => {
 router.get('/get-admin-ads', adminController.getAdminAds);
 router.delete('/delete-ad', adminController.deleteAdminAd);
 router.get('/get-ad-locations', adminController.getAllAdLocations)
+router.get('/get-users', adminController.getAllUsers);
+router.put('/block_user', adminController.blockUserById);
 
 
 module.exports = router;
