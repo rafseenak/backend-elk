@@ -87,7 +87,7 @@ exports.createGuestUser = async (req, res) => {
             name:'Guest'
         });
         const token = jwt.sign({ id: guest.user_id }, process.env.ACCESS_TOKEN_SECRET);    
-        guest.token = token;
+        // guest.token = token;
         await guest.save();
         const response = {
             user_id: guest.user_id,
@@ -123,7 +123,7 @@ exports.createUser = async (req, res) => {
                     profileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
                 }
                 const token = jwt.sign({ id: user.user_id }, process.env.ACCESS_TOKEN_SECRET);
-                user.token = token;
+                // user.token = token;
                 await user.save();
 
                 return res.status(200).json({
@@ -132,7 +132,7 @@ exports.createUser = async (req, res) => {
                     data: {
                         user_id:user.user_id,
                         name:user.name,
-                        token: token,
+                        // token: token,
                         profile: profileUrl,
                         mobile_number: user.mobile_number,
                         email:user.email,
@@ -150,7 +150,7 @@ exports.createUser = async (req, res) => {
                 });
                 await user.save();
                 const token = jwt.sign({ id: user.user_id }, process.env.ACCESS_TOKEN_SECRET);
-                user.token = token;
+                // user.token = token;
                 await user.save();
 
                 return res.status(200).json({
@@ -159,7 +159,7 @@ exports.createUser = async (req, res) => {
                     data: {
                         user_id:user.user_id,
                         name:user.name,
-                        token: token,
+                        // token: token,
                         profile: user.profile,
                         mobile_number: user.mobile_number,
                         email:user.email,
