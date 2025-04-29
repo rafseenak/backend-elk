@@ -132,7 +132,7 @@ exports.createUser = async (req, res) => {
                     data: {
                         user_id:user.user_id,
                         name:user.name,
-                        // token: token,
+                        token: token,
                         profile: profileUrl,
                         mobile_number: user.mobile_number,
                         email:user.email,
@@ -159,7 +159,7 @@ exports.createUser = async (req, res) => {
                     data: {
                         user_id:user.user_id,
                         name:user.name,
-                        // token: token,
+                        token: token,
                         profile: user.profile,
                         mobile_number: user.mobile_number,
                         email:user.email,
