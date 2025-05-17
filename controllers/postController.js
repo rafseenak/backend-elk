@@ -630,12 +630,44 @@ exports.recommentedPosts = async (req, res) => {
                     as: "ad_location"
                 })
             }
-        } else {
+        } 
+        else if (req.body.latitude && req.body.longitude) {
+            const lat = parseFloat(req.body.latitude);
+            const lon = parseFloat(req.body.longitude);
+            adsQuery.include.push({ model: AdLocation, as: 'ad_location' , where: {
+                            [Op.or]: [
+                                { latitude:lat },
+                                { longitude: lon}
+                            ]
+                        }});
+
+            adsQuery.attributes = {
+                include: [
+                    [
+                        literal(`(
+                            SELECT (6371 * 
+                                acos(cos(radians(${lat})) * cos(radians(ad_location.latitude)) * 
+                                cos(radians(ad_location.longitude) - radians(${lon})) + 
+                                sin(radians(${lat})) * sin(radians(ad_location.latitude)))
+                            ) AS distance
+                        )`), 'distance'
+                    ],
+                ]
+            };
+            adsQuery.order = [
+                [sequelize.literal('distance'), 'ASC']
+            ];
+        
+        }
+        else {
             adsQuery.include.push({
                 model: AdLocation,
                 as: "ad_location"
             })
         }
+
+        
+
         const { count, rows: ads } = await Ad.findAndCountAll(adsQuery);
 
         const totalPages = Math.ceil(count / perPage);
