@@ -78,7 +78,7 @@ router.post('/recomented_posts',postController.recommentedPosts);
 router.post('/rent_category_posts',postController.rentCategoryPosts);
 router.post('/categories_search',postController.searchCategories);
 router.post('/best_service_providers',postController.bestServiceProviders);
-
+router.post('/search_ad',postController.searchAds);
 //chat
 router.post('/add_chat',authenticateToken,chatController.addChat);
 router.get('/get_chat', chatController.getChatMessages);

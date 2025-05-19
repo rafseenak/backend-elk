@@ -308,11 +308,11 @@ exports.getAdDetails = async (req, res) => {
             ad_location: {
                 id: ad.ad_location.id,
                 ad_id: ad.ad_location.ad_id,
-                locality: ad.ad_location.locality,
-                place: ad.ad_location.place,
-                district: ad.ad_location.district,
-                state: ad.ad_location.state,
-                country: ad.ad_location.country,
+                locality: ad.ad_location.locality??'',
+                place: ad.ad_location.place??'',
+                district: ad.ad_location.district??'',
+                state: ad.ad_location.state??'',
+                country: ad.ad_location.country??'',
                 longitude: `${ad.ad_location.longitude}`,
                 latitude: `${ad.ad_location.latitude}`,
                 createdAt: ad.ad_location.createdAt.toISOString(),
@@ -403,11 +403,11 @@ exports.myAds = async (req, res) => {
                     "ad_location": ad.dataValues.ad_location ? {
                         "id": ad.dataValues.ad_location.id,
                         "ad_id": ad.dataValues.ad_location.ad_id,
-                        "locality": ad.dataValues.ad_location.locality,
-                        "place": ad.dataValues.ad_location.place,
-                        "district": ad.dataValues.ad_location.district,
-                        "state": ad.dataValues.ad_location.state,
-                        "country": ad.dataValues.ad_location.country,
+                        "locality": ad.dataValues.ad_location.locality??'',
+                        "place": ad.dataValues.ad_location.place??'',
+                        "district": ad.dataValues.ad_location.district??'',
+                        "state": ad.dataValues.ad_location.state??'',
+                        "country": ad.dataValues.ad_location.country??'',
                         "longitude": `${ad.dataValues.ad_location.longitude}`,
                         "latitude": `${ad.dataValues.ad_location.latitude}`,
                         "createdAt": ad.dataValues.ad_location.createdAt.toISOString(),
@@ -505,11 +505,11 @@ exports.getRecentUnsavedPost = async (req, res) => {
                 ad_location: ad.ad_location ? {
                     id: ad.ad_location.id,
                     ad_id: ad.ad_location.ad_id,
-                    locality: ad.ad_location.locality,
-                    place: ad.ad_location.place,
-                    district: ad.ad_location.district,
-                    state: ad.ad_location.state,
-                    country: ad.ad_location.country,
+                    locality: ad.ad_location.locality??'',
+                    place: ad.ad_location.place??'',
+                    district: ad.ad_location.district??'',
+                    state: ad.ad_location.state??'',
+                    country: ad.ad_location.country??'',
                     longitude: `${ad.ad_location.longitude}`,
                     latitude: `${ad.ad_location.latitude}`,
                     createdAt: ad.ad_location.createdAt.toISOString(),
@@ -545,10 +545,8 @@ exports.searchCategories = async (req, res) => {
 };
 
 exports.recommentedPosts = async (req, res) => {
-    console.log('Called', req.body.id);
-
     try {
-        const page = req.body.page;
+        const page =parseInt(req.body.page);
         const perPage = 16;
         const offset = (page - 1) * perPage;
         let userSearches = [];
@@ -633,11 +631,30 @@ exports.recommentedPosts = async (req, res) => {
         } else {
             adsQuery.include.push({
                 model: AdLocation,
-                as: "ad_location"
+                as: "ad_location",
+                required: true,
             })
+            if(req.body.latitude && req.body.longitude){
+                adsQuery.attributes = {
+                    include: [
+                        [
+                            literal(`(
+                                SELECT (6371 * 
+                                    acos(cos(radians(${req.body.latitude})) * cos(radians(ad_location.latitude)) * 
+                                    cos(radians(ad_location.longitude) - radians(${req.body.longitude})) + 
+                                    sin(radians(${req.body.latitude})) * sin(radians(ad_location.latitude)))
+                                ) AS distance
+                            )`), 'distance'
+                        ],
+                    ]
+                };
+                adsQuery.order = [
+                    [sequelize.literal('distance'), 'ASC']
+                ];
+            }
         }
+       
         const { count, rows: ads } = await Ad.findAndCountAll(adsQuery);
-
         const totalPages = Math.ceil(count / perPage);
         const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl.split('?')[0]}`;
         const buildUrl = (pageNum) => `${fullUrl}?page=${pageNum}`;
@@ -679,11 +696,11 @@ exports.recommentedPosts = async (req, res) => {
                         ad_location: {
                             id: ad.dataValues.ad_location.id,
                             ad_id: ad.dataValues.ad_location.ad_id,
-                            locality: ad.dataValues.ad_location.locality,
-                            place: ad.dataValues.ad_location.place,
-                            district: ad.dataValues.ad_location.district,
-                            state: ad.dataValues.ad_location.state,
-                            country: ad.dataValues.ad_location.country,
+                            locality: ad.dataValues.ad_location.locality??'',
+                            place: ad.dataValues.ad_location.place??'',
+                            district: ad.dataValues.ad_location.district??'',
+                            state: ad.dataValues.ad_location.state??'',
+                            country: ad.dataValues.ad_location.country??'',
                             longitude: `${ad.dataValues.ad_location.longitude}`,
                             latitude: `${ad.dataValues.ad_location.latitude}`,
                             createdAt: ad.dataValues.ad_location.createdAt.toISOString(),
@@ -745,6 +762,127 @@ exports.getAllPosts = async (req, res) => {
     );
     res.status(200).json(posts);
 }
+
+exports.searchAds = async (req, res) => {   
+    try {
+        const { keyword, page = 1 } = req.body;
+        if (!keyword) {
+            return res.status(400).json({ message: 'Keyword is required' });
+        }
+
+        const perPage = 15;
+        const offset = (page - 1) * perPage;
+
+        let adsQuery = {
+            where: {
+                ad_status: 'online',
+                ad_stage: 3
+            },
+            include: [
+                { model: User, as: 'user' },
+                { model: AdImage, as: 'ad_images' },
+                { model: AdPriceDetails, as: 'ad_price_details' },
+                { model: AdLocation, as: 'ad_location' }
+            ],
+            distinct: true,
+            limit: perPage,
+            offset: offset,
+        };
+
+        if (!isNaN(keyword)) {
+            adsQuery.where.ad_id = Number(keyword);
+        } else {
+            adsQuery.where[Op.or] = [
+                { title: { [Op.like]: `%${keyword}%` } },
+                { category: { [Op.like]: `%${keyword}%` } },
+                { description: { [Op.like]: `%${keyword}%` } }
+            ];
+        }
+
+        const { count, rows: ads } = await Ad.findAndCountAll(adsQuery);
+        const totalPages = Math.ceil(count / perPage);
+        const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl.split('?')[0]}`;
+        const buildUrl = (pageNum) => `${fullUrl}?page=${pageNum}`;
+
+        const response = {
+            current_page: page,
+            data: await Promise.all(ads.map(async (ad) => ({
+                id: ad.ad_id,
+                ad_id: ad.ad_id,
+                user_id: ad.user_id,
+                title: ad.title,
+                category: ad.category,
+                description: ad.description,
+                ad_type: ad.ad_type,
+                ad_status: ad.ad_status,
+                ad_stage: ad.ad_stage,
+                createdAt: ad.createdAt.toISOString(),
+                updatedAt: ad.updatedAt.toISOString(),
+                ad_price_details: ad.ad_price_details.map(price => ({
+                    id: price.id,
+                    ad_id: price.ad_id,
+                    rent_duration: price.rent_duration,
+                    rent_price: price.rent_price,
+                    createdAt: price.createdAt.toISOString(),
+                    updatedAt: price.updatedAt.toISOString()
+                })),
+                ad_images: await Promise.all(ad.ad_images.map(async image => ({
+                    id: image.id,
+                    ad_id: image.ad_id,
+                    image: image.image ? await getImageUrl(image.image) : null,
+                    createdAt: image.createdAt.toISOString(),
+                    updatedAt: image.updatedAt.toISOString()
+                }))),
+                ad_location: ad.ad_location ? {
+                    id: ad.ad_location.id,
+                    ad_id: ad.ad_location.ad_id,
+                    locality: ad.ad_location.locality??'',
+                    place: ad.ad_location.place??'',
+                    district: ad.ad_location.district??'',
+                    state: ad.ad_location.state??'',
+                    country: ad.ad_location.country??'',
+                    longitude: `${ad.ad_location.longitude}`,
+                    latitude: `${ad.ad_location.latitude}`,
+                    createdAt: ad.ad_location.createdAt.toISOString(),
+                    updatedAt: ad.ad_location.updatedAt.toISOString()
+                } : null
+            }))),
+            first_page_url: buildUrl(1),
+            from: offset + 1,
+            last_page: totalPages,
+            last_page_url: buildUrl(totalPages),
+            links: [
+                {
+                    url: page > 1 ? buildUrl(page - 1) : null,
+                    label: "&laquo; Previous",
+                    active: page > 1
+                },
+                {
+                    url: buildUrl(page),
+                    label: `${page}`,
+                    active: true
+                },
+                {
+                    url: page < totalPages ? buildUrl(page + 1) : null,
+                    label: "Next &raquo;",
+                    active: page < totalPages
+                }
+            ],
+            next_page_url: page < totalPages ? buildUrl(page + 1) : null,
+            path: fullUrl,
+            per_page: perPage,
+            prev_page_url: page > 1 ? buildUrl(page - 1) : null,
+            to: Math.min(offset + perPage, count),
+            total: count
+        };
+
+        res.status(200).json(response);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 exports.rentCategoryPosts = async (req, res) => {    
     try {
         const { ad_type, location_type, location, latitude, longitude, category, keyword, page = 1, user_id } = req.body;
@@ -947,11 +1085,11 @@ exports.rentCategoryPosts = async (req, res) => {
                         ad_location: {
                             id: ad.dataValues.ad_location.id,
                             ad_id: ad.dataValues.ad_location.ad_id,
-                            locality: ad.dataValues.ad_location.locality,
-                            place: ad.dataValues.ad_location.place,
-                            district: ad.dataValues.ad_location.district,
-                            state: ad.dataValues.ad_location.state,
-                            country: ad.dataValues.ad_location.country,
+                            locality: ad.dataValues.ad_location.locality??'',
+                            place: ad.dataValues.ad_location.place??'',
+                            district: ad.dataValues.ad_location.district??'',
+                            state: ad.dataValues.ad_location.state??'',
+                            country: ad.dataValues.ad_location.country??'',
                             longitude: `${ad.dataValues.ad_location.longitude}`,
                             latitude: `${ad.dataValues.ad_location.latitude}`,
                             createdAt: ad.dataValues.ad_location.createdAt.toISOString(),
@@ -1147,11 +1285,11 @@ exports.bestServiceProviders = async (req, res) => {
                         ad_location: {
                             id: ad.dataValues.ad_location.id,
                             ad_id: ad.dataValues.ad_location.ad_id,
-                            locality: ad.dataValues.ad_location.locality,
-                            place: ad.dataValues.ad_location.place,
-                            district: ad.dataValues.ad_location.district,
-                            state: ad.dataValues.ad_location.state,
-                            country: ad.dataValues.ad_location.country,
+                            locality: ad.dataValues.ad_location.locality??'',
+                            place: ad.dataValues.ad_location.place??'',
+                            district: ad.dataValues.ad_location.district??'',
+                            state: ad.dataValues.ad_location.state??'',
+                            country: ad.dataValues.ad_location.country??'',
                             longitude: `${ad.dataValues.ad_location.longitude}`,
                             latitude: `${ad.dataValues.ad_location.latitude}`,
                             createdAt: ad.dataValues.ad_location.createdAt.toISOString(),
