@@ -102,7 +102,6 @@ exports.createAd = async (req, res) => {
 exports.updateAdImage = async (req, res) => {
     const { ad_id, ad_stage, ad_status } = req.query;
     const images = req.files;
-    console.log(req.files);
 
     if (!ad_id) {
         return res.status(400).json({ success: false, message: 'Invalid request' });
@@ -148,8 +147,6 @@ exports.updateAdImage = async (req, res) => {
             data: updatedImages
         });
     } catch (err) {
-        console.log(err);
-
         return res.status(500).json({ success: false, message: 'Server error' });
     }
 }
@@ -179,7 +176,6 @@ exports.deletAdImage = async (req, res) => {
 exports.updateAdAddress = async (req, res) => {
     const { ad_id, country, latitude, longitude, state, district, locality, ad_stage, ad_status, place } = req.body;
     if (!ad_id || !country || latitude === undefined || longitude === undefined) {
-        console.log(req.body);
         return res.status(400).json({ success: false, message: 'Invalid request' });
     }
     try {
@@ -332,9 +328,7 @@ exports.getAdDetails = async (req, res) => {
             }
         };
         res.status(200).json(response);
-    } catch (error) {
-        console.log(error);
-        
+    } catch (error) {        
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -739,8 +733,6 @@ exports.recommentedPosts = async (req, res) => {
         }
         res.status(200).json(response);
     } catch (error) {
-        console.log(error);
-
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -907,9 +899,7 @@ exports.rentCategoryPosts = async (req, res) => {
         let adsQuery;
         const allAds = await Ad.findAll({ attributes: ['ad_id'] });
         const allAdIds = allAds.map(ad => ad.ad_id);
-        if (keyword && allAdIds.includes(Number(keyword))) {
-            console.log('1111');
-            
+        if (keyword && allAdIds.includes(Number(keyword))) {            
             adsQuery = {
                 where: {
                     ad_id: Number(keyword),
@@ -925,9 +915,7 @@ exports.rentCategoryPosts = async (req, res) => {
                 limit: perPage,
                 offset: offset,
             };
-        } else if (!location_type || !location || !latitude || !longitude) {
-            console.log('2222');
-            
+        } else if (!location_type || !location || !latitude || !longitude) {            
             adsQuery = {
                 where: {
                     ad_type: ad_type,
@@ -945,9 +933,7 @@ exports.rentCategoryPosts = async (req, res) => {
                 offset: offset,
             };
             if (category) adsQuery.where.category = category;
-            if (keyword) {
-                console.log('keyword');
-                
+            if (keyword) {                
                 adsQuery.where[Op.or] = [
                     { category: { [Op.like]: `%${keyword}%` } },
                     { title: { [Op.like]: `%${keyword}%` } },
@@ -955,7 +941,6 @@ exports.rentCategoryPosts = async (req, res) => {
                 ];
             }
         } else {
-            console.log('3333');
             adsQuery = {
                 where: {
                     ad_type: ad_type,
@@ -1022,9 +1007,6 @@ exports.rentCategoryPosts = async (req, res) => {
                 });
             }
         }
-
-        console.log(adsQuery);
-
         const { count, rows: ads } = await Ad.findAndCountAll(adsQuery);
         
         const userId = user_id;
@@ -1128,8 +1110,6 @@ exports.rentCategoryPosts = async (req, res) => {
         }
         res.status(200).json(response);
     } catch (error) {
-        console.log(error);
-
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -1137,9 +1117,7 @@ exports.rentCategoryPosts = async (req, res) => {
 exports.bestServiceProviders = async (req, res) => {
     try {
         const perPage = 10;
-        const { location_type, location, latitude, longitude, page = 1, user_id } = req.body;
-        console.log(user_id);
-        
+        const { location_type, location, latitude, longitude, page = 1, user_id } = req.body;        
         const offset = (page - 1) * perPage;
         const hasLocation = location_type && location && latitude && longitude;
         let adsQuery;

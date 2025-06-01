@@ -108,7 +108,6 @@ exports.addChat = async (req, res) => {
         }
         res.status(200).json({ message: 'Chat message added successfully', data: chatMessage.dataValues });
     } catch (error) {
-        console.log(error);
         res.status(500).json({ error: 'Something went wrong'+error });
     }
 };
@@ -196,7 +195,7 @@ exports.updateMessageStatus = async (authUserId, otherUserId)=>{
         );
         return { authUserId, otherUserId }
     }catch(e){
-        console.log(e);     
+        //
     }
 }
 
