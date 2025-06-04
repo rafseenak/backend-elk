@@ -317,7 +317,7 @@ exports.getAdDetails = async (req, res) => {
             user: {
                 id: ad.user.id,
                 user_id: ad.user.user_id,
-                is_guest: ad.user.is_guest,
+                // is_guest: ad.user.is_guest,
                 name: ad.user.name,
                 email: ad.user.email,
                 email_uid: ad.user.email_uid,
@@ -371,7 +371,7 @@ exports.myAds = async (req, res) => {
                     "user": ad.dataValues.user ? {
                         "id": ad.dataValues.user.id,
                         "user_id": ad.dataValues.user.user_id,
-                        "is_guest": ad.dataValues.user.is_guest,
+                        // "is_guest": ad.dataValues.user.is_guest,
                         "name": ad.dataValues.user.name,
                         "email": ad.dataValues.user.email,
                         "email_uid": ad.dataValues.user.email_uid,

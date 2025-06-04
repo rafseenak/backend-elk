@@ -15,11 +15,11 @@ User.init({
     allowNull: false,
     unique: true,
   },
-  is_guest: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false,
-  },
+  // is_guest: {
+  //   type: DataTypes.BOOLEAN,
+  //   allowNull: false,
+  //   defaultValue: false,
+  // },
   name: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -50,10 +50,6 @@ User.init({
     type: DataTypes.STRING,
     allowNull: true,
   },
-  // token: {
-  //   type: DataTypes.STRING,
-  //   allowNull: true,
-  // },
   block_status: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
