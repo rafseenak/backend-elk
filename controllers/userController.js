@@ -136,7 +136,7 @@ exports.createUser = async (req, res) => {
                         profile: profileUrl,
                         mobile_number: user.mobile_number,
                         email:user.email,
-                        is_guest:user.is_guest,
+                        // is_guest:user.is_guest,
                         description:user.description,
                         is_admin: user.is_admin
                     }
@@ -163,7 +163,7 @@ exports.createUser = async (req, res) => {
                         profile: user.profile,
                         mobile_number: user.mobile_number,
                         email:user.email,
-                        is_guest:user.is_guest,
+                        // is_guest:user.is_guest,
                         description:user.description,
                         is_admin: user.is_admin
                     }
@@ -495,7 +495,7 @@ exports.userWithAds = async (req, res) => {
         const response={
             id: user.dataValues.id,
             user_id: user.dataValues.user_id,
-            is_guest: user.dataValues.is_guest,
+            // is_guest: user.dataValues.is_guest,
             name: user.dataValues.name,
             email_uid: user.dataValues.email_uid,
             profile: user.dataValues.profile?await getImageUrl(user.dataValues.profile):null,
@@ -626,7 +626,7 @@ exports.userWishlists = async (req, res) => {
                 user: {
                     id: ad.user.id,
                     user_id: ad.user.user_id,
-                    is_guest: ad.user.is_guest,
+                    // is_guest: ad.user.is_guest,
                     name: ad.user.name,
                     email: ad.user.email,
                     email_uid: ad.user.email_uid,
@@ -698,7 +698,7 @@ exports.viewContact = async (req, res) => {
         const response={
             id:user.id,
             user_id:user.user_id,
-            is_guest:user.is_guest,
+            // is_guest:user.is_guest,
             name:user.name,
             email:user.email,
             email_uid:user.email_uid,

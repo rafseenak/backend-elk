@@ -101,9 +101,9 @@ const getAdminAds = async (req, res) => {
 const getAllUsers = async (req, res) => {
     try {
         const users = await User.findAll({
-            where: {
-                is_guest : false
-            }
+            // where: {
+            //     is_guest : false
+            // }
         });
         const usersWithProfileUrls = await Promise.all(users.map(async (user) => {
             const userObj = user.toJSON();
