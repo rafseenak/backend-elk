@@ -5,6 +5,7 @@ const sequelize = require('./config/db');
 require('dotenv').config();
 const cors = require('cors');
 const app = express();
+const path = require('path')
 const chatController = require('./controllers/chatController');
 const socketIo = require('socket.io');
 const http = require('http');
@@ -27,7 +28,7 @@ app.use(cors({
 
 app.use(bodyParser.json());
 app.use('/api', userRoutes);
-
+app.use('/.well-known', express.static(path.join(__dirname, '.well-known')));
 app.get('/', (req, res) => {
   res.send('Welcome to the Node.js MySQL API');
 }); 
