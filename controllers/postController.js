@@ -757,7 +757,7 @@ exports.getAllPosts = async (req, res) => {
 
 exports.searchAds = async (req, res) => {   
     try {
-        const { keyword, page = 1 } = req.body;
+        const { keyword, page = 1, min_price, max_price } = req.body;
         if (!keyword) {
             return res.status(400).json({ message: 'Keyword is required' });
         }
@@ -773,7 +773,14 @@ exports.searchAds = async (req, res) => {
             include: [
                 { model: User, as: 'user' },
                 { model: AdImage, as: 'ad_images' },
-                { model: AdPriceDetails, as: 'ad_price_details' },
+                { 
+                    model: AdPriceDetails,
+                    as: 'ad_price_details',
+                    where: {
+                        ...(min_price !== undefined ? { rent_price: { [Op.gte]: Number(min_price) } } : {}),
+                        ...(max_price !== undefined ? { rent_price: { ...(min_price !== undefined ? { [Op.gte]: Number(min_price), [Op.lte]: Number(max_price) } : { [Op.lte]: Number(max_price) }) } } : {})
+                    },
+                },
                 { model: AdLocation, as: 'ad_location' }
             ],
             distinct: true,
