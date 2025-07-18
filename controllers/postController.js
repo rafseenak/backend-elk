@@ -874,7 +874,7 @@ exports.searchAds = async (req, res) => {
             to: Math.min(offset + perPage, count),
             total: count
         };
-
+        
         res.status(200).json(response);
     } catch (error) {
         console.error(error);
@@ -882,9 +882,9 @@ exports.searchAds = async (req, res) => {
     }
 };
 
-exports.rentCategoryPosts = async (req, res) => {    
+exports.rentCategoryPosts = async (req, res) => {       
     try {
-        const { ad_type, location_type, location, latitude, longitude, category, keyword, page = 1, user_id } = req.body;
+        const { ad_type, location_type, location, latitude, longitude, category, keyword, page = 1, user_id, min_price, max_price } = req.body;
         if (!ad_type) {
             return res.status(400).json({ message: 'Invalid request' });
         }
@@ -915,7 +915,14 @@ exports.rentCategoryPosts = async (req, res) => {
                 include: [
                     { model: User, as: 'user' },
                     { model: AdImage, as: 'ad_images' },
-                    { model: AdPriceDetails, as: 'ad_price_details' },
+                    { 
+                        model: AdPriceDetails, 
+                        as: 'ad_price_details',
+                        where: {
+                            ...(min_price !== undefined ? { rent_price: { [Op.gte]: Number(min_price) } } : {}),
+                            ...(max_price !== undefined ? { rent_price: { ...(min_price !== undefined ? { [Op.gte]: Number(min_price), [Op.lte]: Number(max_price) } : { [Op.lte]: Number(max_price) }) } } : {})
+                        },
+                    },
                     { model: AdLocation, as: 'ad_location' }
                 ],
                 distinct: true,
@@ -932,7 +939,14 @@ exports.rentCategoryPosts = async (req, res) => {
                 include: [
                     { model: User, as: 'user' },
                     { model: AdImage, as: 'ad_images' },
-                    { model: AdPriceDetails, as: 'ad_price_details' },
+                    { 
+                        model: AdPriceDetails,
+                        as: 'ad_price_details',
+                        where: {
+                            ...(min_price !== undefined ? { rent_price: { [Op.gte]: Number(min_price) } } : {}),
+                            ...(max_price !== undefined ? { rent_price: { ...(min_price !== undefined ? { [Op.gte]: Number(min_price), [Op.lte]: Number(max_price) } : { [Op.lte]: Number(max_price) }) } } : {})
+                        },
+                    },
                     { model: AdLocation, as: 'ad_location' }
                 ],
                 distinct: true,
@@ -970,7 +984,14 @@ exports.rentCategoryPosts = async (req, res) => {
                 include: [
                     { model: User, as: 'user' },
                     { model: AdImage, as: 'ad_images' },
-                    { model: AdPriceDetails, as: 'ad_price_details' },
+                    { 
+                        model: AdPriceDetails,
+                        as: 'ad_price_details',
+                        where: {
+                            ...(min_price !== null ? { rent_price: { [Op.gte]: Number(min_price) } } : {}),
+                            ...(max_price !== null ? { rent_price: { ...(min_price !== null ? { [Op.gte]: Number(min_price), [Op.lte]: Number(max_price) } : { [Op.lte]: Number(max_price) }) } } : {})
+                        },
+                    },
                 ],
                 order: [
                     [sequelize.literal('distance'), 'ASC']
@@ -1114,7 +1135,7 @@ exports.rentCategoryPosts = async (req, res) => {
             prev_page_url: page > 1 ? buildUrl(page - 1) : null,
             to: Math.min(offset + perPage, count),
             total: count
-        }
+        };
         res.status(200).json(response);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
