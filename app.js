@@ -13,11 +13,18 @@ const ChatRoom = require('./models/chatRoomModel');
 const ChatMessage = require('./models/chatMessageModel');
 const { Op } = require('sequelize');
 const server = http.createServer(app);
+// const admin = require("firebase-admin");
+
 const io = socketIo(server, {
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 });
+
+// const serviceAccount = require("./firebaseServiceAccountKey.json");
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount),
+// });
 
 const port = process.env.PORT || 3000;
 app.use(cors({

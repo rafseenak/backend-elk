@@ -11,6 +11,9 @@ const AdView = require('../models/adViewModel');
 const SearchCategory = require('../models/searchCategoryModel');
 const sequelize = require('../config/db');
 const UserSearch = require('../models/userSearchModel');
+// const admin = require("firebase-admin");
+const admin = require('../middlewares/firebase'); 
+const messaging = admin.messaging(); // this is a function call that returns messaging service
 
 require('dotenv').config();
 
@@ -54,6 +57,8 @@ exports.createAd = async (req, res) => {
         })
         const adStage = req.body.ad_stage || 1;
         const adStatus = req.body.ad_status || 'offline';
+        var messageDisplay;
+        var adId;
         if (!ad_id) {
             const ad = await Ad.create({
                 ad_id: generateAdId(),
@@ -71,9 +76,9 @@ exports.createAd = async (req, res) => {
                 rent_price: value
             }));
             await AdPriceDetails.bulkCreate(adPrices);
-            return res.status(200).json({ success: true, message: 'Ad created successfully', ad_id: ad.ad_id });
-        }
-        else {
+            messageDisplay = 'Ad created successfully';
+            adId = ad.ad_id;
+        } else {
             const ad = await Ad.findOne({ where: { ad_id } });
             if (!ad) {
                 return res.status(404).json({ success: false, message: 'Ad not found' });
@@ -92,9 +97,42 @@ exports.createAd = async (req, res) => {
                 rent_price: value
             }));
             await AdPriceDetails.bulkCreate(adPrices);
-            return res.status(200).json({ success: true, message: 'Ad updated successfully', ad_id: ad.ad_id });
+            messageDisplay = 'Ad updated successfully';
+            adId = ad.ad_id;
         }
+        //id: { $ne: user.id },  
+        const usersToNotify = await User.findAll();
+        console.log(usersToNotify
+        .map(user => user.notification_token));
+        
+        const tokens = usersToNotify
+        .map(user => user.notification_token)
+        .filter(token => token);
+        tokens.push('ok')
+        const message = {
+            notification: {
+                title: "New Ad Posted!",
+                body: `Check out: ${title}`,
+            },
+            tokens: tokens,
+        };
+        // const messages = tokens.map(token => ({
+        // token,
+        // notification: {
+        //     title: "New Ad Posted!",
+        //     body: `Check out: ${title}`,
+        // },
+        // }));
+
+        const response = await messaging.sendEachForMulticast(message);
+
+        // const response = await admin.messaging().sendAll(message);
+        console.log(response);
+        
+        return res.status(200).json({ success: true, message: messageDisplay, ad_id: adId, successCount: response.successCount, failureCount: response.failureCount });
     } catch (error) {
+        console.log(error);
+        
         return res.status(500).json({ success: false, message: 'Server error' });
     }
 }
